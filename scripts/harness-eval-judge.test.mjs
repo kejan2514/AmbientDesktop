@@ -48,7 +48,7 @@ describe("meta harness judge", () => {
       await writeFile(join(trace, "summary.json"), JSON.stringify({ model: "zai-org/GLM-5.1-FP8", toolEventCount: 5 }), "utf8");
       await writeFile(join(trace, "changed-files.json"), JSON.stringify({ changes: [{ path: "README.md", status: "modified", after: { bytes: 12 } }] }), "utf8");
       await writeFile(join(trace, "tool-transcript.txt"), "bash\nok", "utf8");
-      await writeFile(join(trace, "stdout.log"), `AMBIENT_API_KEY=supersecret\n${"x".repeat(5000)}`, "utf8");
+      await writeFile(join(trace, "stdout.log"), `AMBIENT_API_KEY_FILE=<ignored-key-file>"x".repeat(5000)}`, "utf8");
 
       const packet = await buildJudgePacket({
         runRoot: root,

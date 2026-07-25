@@ -40,7 +40,7 @@ describeNative("AgentRuntime goal mode live smoke", () => {
     const thread = store.createThread("Goal mode live smoke");
     const goal = store.createThreadGoalIfAbsent({
       threadId: thread.id,
-      objective: "Complete the Ambient goal mode live smoke by reading this goal and marking it complete.",
+      objective: "Read the active goal, verify its id, and mark it complete.",
       tokenBudget: 4000,
     });
     runtime = new AgentRuntime(store, {} as any, {} as any, () => undefined, {
@@ -57,7 +57,7 @@ describeNative("AgentRuntime goal mode live smoke", () => {
       `2. Confirm the active goal id is ${goal.goalId}.`,
       "3. Call update_goal with status complete.",
       "4. Reply exactly: GOAL_MODE_LIVE_DONE",
-      "Do not use filesystem, shell, browser, network, or plugin tools.",
+      "Do not use any tools other than get_goal and update_goal.",
     ].join("\n");
 
     await sendWithTimeout({
@@ -77,6 +77,9 @@ describeNative("AgentRuntime goal mode live smoke", () => {
 
     const toolNames = threadToolNames(store, thread.id);
     const finalGoal = store.getThreadGoal(thread.id);
+    const completionMessage = store.listMessages(thread.id).find(
+      (message) => message.metadata?.kind === "goal-completion" && message.metadata?.goalId === goal.goalId,
+    );
     const transcript = threadTranscript(store, thread.id);
     const assistantText = store
       .listMessages(thread.id)
@@ -91,6 +94,7 @@ describeNative("AgentRuntime goal mode live smoke", () => {
       goalId: goal.goalId,
       toolNames,
       finalGoal,
+      completionMessage,
       assistantText,
       transcript,
     };
@@ -101,9 +105,13 @@ describeNative("AgentRuntime goal mode live smoke", () => {
 
     expect(toolNames).toContain("get_goal");
     expect(toolNames).toContain("update_goal");
-    expect(finalGoal).toMatchObject({
-      goalId: goal.goalId,
-      status: "complete",
+    expect(finalGoal).toBeUndefined();
+    expect(completionMessage).toMatchObject({
+      role: "assistant",
+      metadata: expect.objectContaining({
+        kind: "goal-completion",
+        goalId: goal.goalId,
+      }),
     });
     expect(assistantText).toContain("GOAL_MODE_LIVE_DONE");
   }, Number(process.env.AMBIENT_GOAL_MODE_LIVE_TEST_TIMEOUT_MS ?? 240_000));

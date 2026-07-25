@@ -21,7 +21,7 @@ describe("pathRedaction", () => {
   });
 
   it("creates stable non-path refs for secret-like paths", () => {
-    const path = "/Users/example/Documents/ambientCoder/ignored provider key files";
+    const path = "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt";
     const first = sensitivePathRef(path);
     const second = sensitivePathRef(path);
 
@@ -33,7 +33,7 @@ describe("pathRedaction", () => {
 
   it("replaces secret-like path tokens without literal redacted placeholders", () => {
     const input = [
-      "Use --api-key-file=/Users/example/Documents/ambientCoder/ignored provider key files",
+      "Use --api-key-file=/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
       "then inspect /Users/example/project/src/app.ts.",
     ].join(" ");
 
@@ -44,12 +44,12 @@ describe("pathRedaction", () => {
     expect(result.text).toContain("--api-key-file=<sensitive-path-ref:v1:");
     expect(result.text).toContain("sensitive-path-ref:v1:");
     expect(result.text).toContain("/Users/example/project/src/app.ts");
-    expect(result.text).not.toContain("ignored provider key files");
+    expect(result.text).not.toContain("ignored-provider-key-file.txt");
     expect(result.text).not.toContain("[REDACTED]");
   });
 
   it("preserves compact JSON structure when aliasing path values", () => {
-    const input = "{\"path\":\"/tmp/ignored provider key files\",\"ordinary\":\"/tmp/src/index.ts\"}";
+    const input = "{\"path\":\"/tmp/ignored-provider-key-file.txt\",\"ordinary\":\"/tmp/src/index.ts\"}";
 
     const result = redactSensitivePathsInText(input);
     const parsed = JSON.parse(result.text);
@@ -57,23 +57,23 @@ describe("pathRedaction", () => {
     expect(result.replacementCount).toBe(1);
     expect(parsed.path).toMatch(/^<sensitive-path-ref:v1:[a-f0-9]{16}>$/);
     expect(parsed.ordinary).toBe("/tmp/src/index.ts");
-    expect(result.text).not.toContain("ignored provider key files");
+    expect(result.text).not.toContain("ignored-provider-key-file.txt");
   });
 
   it("aliases full quoted sensitive paths that contain spaces", () => {
-    const input = "Debug \"/tmp/my project/ignored provider key files\" then inspect /tmp/my project/src/index.ts";
+    const input = "Debug \"/tmp/my project/ignored-provider-key-file.txt\" then inspect /tmp/my project/src/index.ts";
 
     const result = redactSensitivePathsInText(input);
 
     expect(result.replacementCount).toBe(1);
     expect(result.text).toContain("\"<sensitive-path-ref:v1:");
     expect(result.text).toContain("/tmp/my project/src/index.ts");
-    expect(result.text).not.toContain("/tmp/my project/ignored provider key files");
-    expect(result.refs[0]?.ref).toBe(sensitivePathRef("/tmp/my project/ignored provider key files").ref);
+    expect(result.text).not.toContain("/tmp/my project/ignored-provider-key-file.txt");
+    expect(result.refs[0]?.ref).toBe(sensitivePathRef("/tmp/my project/ignored-provider-key-file.txt").ref);
   });
 
   it("does not collapse quoted commands with mixed sensitive and ordinary paths", () => {
-    const input = "Run \"cat /tmp/ignored provider key files && cat /tmp/project/src/index.ts\"";
+    const input = "Run \"cat /tmp/ignored-provider-key-file.txt && cat /tmp/project/src/index.ts\"";
 
     const result = redactSensitivePathsInText(input);
 
@@ -81,7 +81,7 @@ describe("pathRedaction", () => {
     expect(result.text).toContain("cat <sensitive-path-ref:v1:");
     expect(result.text).toContain("/tmp/project/src/index.ts");
     expect(result.text).toContain("&&");
-    expect(result.text).not.toContain("/tmp/ignored provider key files");
+    expect(result.text).not.toContain("/tmp/ignored-provider-key-file.txt");
   });
 
   it("aliases Windows-style sensitive paths", () => {

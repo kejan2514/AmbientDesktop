@@ -34,7 +34,7 @@ function activeSession(input: Partial<ActiveContextUsageSnapshotSession> = {}): 
   return {
     getContextUsage: () => usage({}),
     sessionFile: "/sessions/thread-1/session.jsonl",
-    model: { contextWindow: 180_000 },
+    model: { id: "example/model-id", contextWindow: 180_000 },
     sessionManager: {
       getEntries: () => [],
     },
@@ -227,6 +227,7 @@ describe("agentRuntimeContextUsageSnapshot", () => {
 
     expect(snapshot).toEqual({
       threadId: "thread-1",
+      modelId: "example/model-id",
       source: "provider-plus-estimate",
       tokens: 80_000,
       contextWindow: 200_000,
@@ -311,6 +312,7 @@ describe("agentRuntimeContextUsageSnapshot", () => {
 
     const snapshot = buildUnavailableContextUsageSnapshot({
       threadId: "thread-1",
+      modelId: "example/model-id",
       sessionDir: "/sessions/thread-1",
       workspacePath: "/workspace",
       contextWindow: 200_000,
@@ -329,6 +331,7 @@ describe("agentRuntimeContextUsageSnapshot", () => {
 
     expect(snapshot).toEqual({
       threadId: "thread-1",
+      modelId: "example/model-id",
       source: "unavailable",
       contextWindow: 200_000,
       compactionCount: 0,
@@ -350,6 +353,7 @@ describe("agentRuntimeContextUsageSnapshot", () => {
 
     const snapshot = buildUnavailableContextUsageSnapshot({
       threadId: "thread-1",
+      modelId: "example/model-id",
       sessionFile: "/outside/session.jsonl",
       sessionDir: "/sessions/thread-1",
       workspacePath: "/workspace",
@@ -383,6 +387,7 @@ describe("agentRuntimeContextUsageSnapshot", () => {
   it("builds unavailable snapshots with compaction stats from restorable session files", () => {
     const snapshot = buildUnavailableContextUsageSnapshot({
       threadId: "thread-1",
+      modelId: "example/model-id",
       sessionFile: "/sessions/thread-1/session.jsonl",
       sessionDir: "/sessions/thread-1",
       workspacePath: "/workspace",

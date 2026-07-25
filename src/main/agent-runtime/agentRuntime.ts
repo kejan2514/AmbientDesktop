@@ -534,6 +534,16 @@ export class AgentRuntime {
     this.emit({ type: "plugin-catalog-updated" });
   }
 
+  refreshModelRuntimeProfiles(): {
+    disposedSessions: number;
+    deferredSessions: number;
+    disposedThreadIds: string[];
+    deferredThreadIds: string[];
+  } {
+    this.invalidateSessionWarmups();
+    return this.controllers.settingsSessions.applyModelRuntimeProfiles();
+  }
+
   async runLocalModelRuntimeLifecycleAction(input: LocalModelRuntimeLifecycleActionInput): Promise<LocalModelRuntimeLifecycleActionResult> {
     return this.controllers.providerRuntime.runLocalModelRuntimeLifecycleAction(input);
   }

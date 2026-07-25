@@ -51,7 +51,7 @@ describe("AgentRuntimeWorkflowRecordingReviewSessionController", () => {
       randomUUID: vi.fn(() => "review-session-uuid"),
       mkdirSync: vi.fn(),
       getAmbientProviderStatus: vi.fn(() =>
-        ({ baseUrl: "https://ambient.example.test" }) as ReturnType<
+        ({ baseUrl: "https://ambient.example.test", model: "provider-request-model" }) as ReturnType<
           AgentRuntimeWorkflowRecordingReviewSessionDependencies["getAmbientProviderStatus"]
         >,
       ),
@@ -128,6 +128,8 @@ describe("AgentRuntimeWorkflowRecordingReviewSessionController", () => {
     expect(dependencies.ambientModel).toHaveBeenCalledWith(
       "example/model-id",
       "normalized:https://ambient.example.test",
+      undefined,
+      { requestModelId: "provider-request-model" },
     );
     expect(dependencies.mkdirSync).toHaveBeenNthCalledWith(1, "/state/pi", { recursive: true });
     expect(dependencies.mkdirSync).toHaveBeenNthCalledWith(

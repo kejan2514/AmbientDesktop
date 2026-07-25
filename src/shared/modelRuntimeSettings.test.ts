@@ -17,7 +17,7 @@ describe("modelRuntimeSettings", () => {
       aggressiveRetries: true,
       showPromptCacheStatus: false,
       providerPreStreamTimeoutMs: 45_000,
-      providerStreamIdleTimeoutMs: 30_000,
+      providerStreamIdleTimeoutMs: 120_000,
       installedProviders: [],
     });
   });

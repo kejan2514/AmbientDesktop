@@ -102,6 +102,7 @@ function ambientModelRuntimeProfileFromEndpointRecord(record: AmbientModelEndpoi
   const selectable = features.has("tools");
   const contextWindowTokens = positiveInteger(record.context_length);
   const maxOutputTokens = positiveInteger(record.max_output_length);
+  const observedAt = new Date().toISOString();
   const label = stringValue(record.name) ?? base.label;
   const reasoningCapability = discoveredReasoningCapability(modelId, features);
   const inheritedQuirks = base.providerId === AMBIENT_PROVIDER_AMBIENT ? base.providerQuirks : [];
@@ -123,6 +124,16 @@ function ambientModelRuntimeProfileFromEndpointRecord(record: AmbientModelEndpoi
     unavailableReason: undefined,
     ...(contextWindowTokens ? { contextWindowTokens } : {}),
     ...(maxOutputTokens ? { maxOutputTokens } : {}),
+    ...(contextWindowTokens
+      ? {
+          limitMetadata: {
+            source: "discovered" as const,
+            requestedOutputTokens: Math.min(maxOutputTokens ?? 32_000, 32_000),
+            advertisedContextWindowTokens: contextWindowTokens,
+            observedAt,
+          },
+        }
+      : {}),
     supportsStreaming: true,
     toolUse: selectable ? "ambient-tools" : "none",
     structuredOutput: features.has("structured_outputs") ? "schema" : features.has("json_mode") ? "json-mode" : "none",

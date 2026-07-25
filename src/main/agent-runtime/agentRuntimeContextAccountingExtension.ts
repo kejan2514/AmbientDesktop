@@ -26,12 +26,15 @@ export interface ContextAccountingCompactionStats {
 
 export interface ContextAccountingExtensionOptions {
   threadId: string;
+  modelId: string;
   contextWindow: number;
+  getRunningModel?: () => { id: string; contextWindow: number } | undefined;
   getActiveSession: (threadId: string) => ContextAccountingSession | undefined;
   compactionStatsFromEntries: (entries: unknown[]) => ContextAccountingCompactionStats;
   countSerializedPayload: (payload: unknown, fallbackTokens?: number) => Promise<ContextAccountingTokenCount>;
   recordContextUsageSnapshot: (input: ContextUsageSnapshotInput) => ContextUsageSnapshot;
   emitContextUsageUpdated: (snapshot: ContextUsageSnapshot) => void;
+  onProviderRequestPrepared?: (input: { inputTokens: number }) => void;
   fileExists?: (path: string) => boolean;
 }
 
@@ -40,6 +43,9 @@ export function createContextAccountingExtension(options: ContextAccountingExten
 
   return (pi) => {
     (pi as any).on("before_provider_request", async (event: any) => {
+      const runningModel = options.getRunningModel?.();
+      const modelId = runningModel?.id ?? options.modelId;
+      const contextWindow = runningModel?.contextWindow ?? options.contextWindow;
       const accounting = summarizeProviderPayload(event.payload);
       const session = options.getActiveSession(options.threadId);
       const compaction = session
@@ -47,12 +53,14 @@ export function createContextAccountingExtension(options: ContextAccountingExten
         : { compactionCount: 0 };
       const tokenCount = await options.countSerializedPayload(event.payload, accounting.estimatedTokens);
       const tokens = tokenCount.tokens || accounting.estimatedTokens;
+      if (typeof tokens === "number") options.onProviderRequestPrepared?.({ inputTokens: tokens });
       const snapshot = options.recordContextUsageSnapshot({
         threadId: options.threadId,
+        modelId,
         source: "estimate",
         tokens,
-        contextWindow: options.contextWindow,
-        percent: tokens !== undefined ? (tokens / options.contextWindow) * 100 : undefined,
+        contextWindow,
+        percent: tokens !== undefined ? (tokens / contextWindow) * 100 : undefined,
         latestCompactionAt: compaction.latestCompactionAt,
         compactionCount: compaction.compactionCount,
         diagnostics: {

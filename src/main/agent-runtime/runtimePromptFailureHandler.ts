@@ -1,5 +1,9 @@
 import { promptCacheTelemetryFromUsage } from "../../shared/promptCacheTelemetry";
-import { AmbientStreamFailureError, isRetryableAmbientProviderError } from "./agentRuntimeAmbientFacade";
+import {
+  AmbientStreamFailureError,
+  isRetryableAmbientProviderError,
+  parseAmbientProviderContextOverflow,
+} from "./agentRuntimeAmbientFacade";
 import type { AmbientStreamFailureKind } from "./agentRuntimeAmbientFacade";
 import type { AssistantFinalizationRetryReason } from "./agentRuntimeAssistantRetryInput";
 import { shouldOpenApiKeyDialogForRuntimeError, formatRuntimeError as formatAgentRuntimeError } from "../agent-runtime/agentRuntimeErrorFormatting";
@@ -10,6 +14,7 @@ import { toolMessageMetadata } from "./tools/agentRuntimeToolMessageMetadata";
 import { interruptedToolCallRecoveryFinalizationMessage } from "./interruptedToolCallRecoveryFinalization";
 import {
   preOutputStreamStallRetryFinalizationMessage,
+  providerContextOverflowRetryFinalizationMessage,
   providerErrorBeforeToolRetryFinalizationMessage,
 } from "./providerRetryFinalization";
 import { handleRuntimePromptProviderInterruption } from "./runtimePromptProviderInterruptionHandler";
@@ -157,6 +162,48 @@ export async function handleRuntimePromptFailure(input: RuntimePromptFailureHand
     input.emitRunEvent({ type: "run-status", threadId: input.threadId, status: "error" });
     input.emitRunEvent({ type: "error", message, threadId: input.threadId, workspacePath: input.workspacePath });
     return;
+  }
+  const providerContextOverflow = parseAmbientProviderContextOverflow(input.error);
+  const providerContextOverflowRetryReason: AssistantFinalizationRetryReason = "provider_context_overflow";
+  const providerContextOverflowAttemptsUsed = input.assistantFinalizationRetryAttemptsUsedFor(
+    providerContextOverflowRetryReason,
+  );
+  const canRecoverProviderContextOverflow =
+    Boolean(providerContextOverflow) &&
+    Boolean(input.recoverProviderContextOverflow) &&
+    !input.abortRequested() &&
+    providerContextOverflowAttemptsUsed < 1 &&
+    Boolean(input.retrySourceUserMessageId) &&
+    !input.receivedAnyText() &&
+    !input.currentAssistantFinalText().trim() &&
+    input.toolMessages.size() === 0 &&
+    input.startedToolCallIds.size === 0;
+  if (canRecoverProviderContextOverflow && providerContextOverflow && input.retrySourceUserMessageId) {
+    try {
+      const learned = await input.recoverProviderContextOverflow!(providerContextOverflow);
+      const retryAttempt = providerContextOverflowAttemptsUsed + 1;
+      input.setPendingEmptyResponseRetry(input.createAssistantFinalizationRetryInput(providerContextOverflowRetryReason));
+      input.setProviderRetryAttemptCount(Math.max(input.providerRetryAttemptCount(), retryAttempt));
+      input.setProviderRetryLastError(message);
+      input.runtimeMessages.finishCurrentThinkingMessage("done", input.currentThinkingFinalText());
+      const retryFinalization = providerContextOverflowRetryFinalizationMessage({
+        retryAttempt,
+        effectiveContextWindowTokens: learned.effectiveContextWindowTokens,
+        requestedOutputTokens: learned.requestedOutputTokens,
+      });
+      const fallback = input.runtimeMessages.replaceCurrentAssistant(
+        retryFinalization.content,
+        retryFinalization.metadata,
+      );
+      input.finishParentRun("done");
+      input.emitRunEvent({ type: "message-updated", message: fallback });
+      input.emitRunEvent({ type: "run-status", threadId: input.threadId, status: "idle" });
+      return;
+    } catch (recoveryError) {
+      console.warn(
+        `Ambient provider context overflow recovery failed: ${recoveryError instanceof Error ? recoveryError.message : String(recoveryError)}`,
+      );
+    }
   }
   const preOutputStreamStallRetryReason: AssistantFinalizationRetryReason = "pre_output_stream_stall";
   const preOutputStreamStall =

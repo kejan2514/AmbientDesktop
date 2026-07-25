@@ -364,6 +364,8 @@ export function createAgentRuntimeServiceControllers({
     tencentMemoryRuntimeSnapshots,
     getThread: (threadId) => store.getThread(threadId),
     switchSessionToThreadModel: (thread, session) => sessionFactory.switchSessionToThreadModel(thread, session),
+    recordUnavailableContextUsageSnapshot: (thread, message) =>
+      callbacks.recordUnavailableContextUsageSnapshot(thread, message),
     emit: (event) => callbacks.emit(event),
   });
 

@@ -15,6 +15,12 @@ export interface ProviderErrorBeforeToolRetryFinalizationInput {
   streamInterruptionDiagnostic: ChatStreamInterruptionDiagnostic;
 }
 
+export interface ProviderContextOverflowRetryFinalizationInput {
+  retryAttempt: number;
+  effectiveContextWindowTokens: number;
+  requestedOutputTokens: number;
+}
+
 export interface ProviderRetryFinalizationMessageModel {
   content: string;
   metadata: Record<string, unknown>;
@@ -57,6 +63,25 @@ export function providerErrorBeforeToolRetryFinalizationMessage(
       piStreamInterruption: {
         ...input.streamInterruptionDiagnostic,
       },
+    },
+  };
+}
+
+export function providerContextOverflowRetryFinalizationMessage(
+  input: ProviderContextOverflowRetryFinalizationInput,
+): ProviderRetryFinalizationMessageModel {
+  return {
+    content:
+      `Ambient learned the provider's effective ${input.effectiveContextWindowTokens.toLocaleString()}-token context limit, compacted the session, and is retrying the request once with ${input.requestedOutputTokens.toLocaleString()} output tokens reserved.`,
+    metadata: {
+      status: "done",
+      runtime: "pi",
+      provider: "ambient",
+      retryingProviderContextOverflow: true,
+      retryAttempt: input.retryAttempt,
+      maxRetries: 1,
+      effectiveContextWindowTokens: input.effectiveContextWindowTokens,
+      requestedOutputTokens: input.requestedOutputTokens,
     },
   };
 }

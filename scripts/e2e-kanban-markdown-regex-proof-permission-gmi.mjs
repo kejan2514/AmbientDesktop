@@ -18,8 +18,8 @@ const proofScreenshotPath = join(runRoot, "phase5-markdown-regex-proof.png");
 const cdpPort = Number(process.env.AMBIENT_KANBAN_MARKDOWN_REGEX_PERMISSION_CDP_PORT || 0) || (await availablePort());
 const workerIdleTimeoutMs = Number(process.env.AMBIENT_KANBAN_MARKDOWN_REGEX_PERMISSION_IDLE_TIMEOUT_MS || 0) || 240_000;
 const workerRunMaxElapsedMs = Number(process.env.AMBIENT_KANBAN_MARKDOWN_REGEX_PERMISSION_MAX_TIMEOUT_MS || 0) || 900_000;
-const defaultRepoKeyFile = join(repoRoot, "ignored provider key files");
-const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored provider key files");
+const defaultRepoKeyFile = join(repoRoot, "ignored-provider-key-file.txt");
+const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored-provider-key-file.txt");
 const keyFile = resolve(process.env.GMI_CLOUD_API_KEY_FILE || (existsSync(defaultRepoKeyFile) ? defaultRepoKeyFile : defaultHomeCheckoutKeyFile));
 const defaultSnapshotWorkspace = join(homedir(), "Documents", "ambientCoderArchive");
 const sourceWorkspace =
@@ -142,7 +142,7 @@ async function sanitizeTempWorkspace() {
   await rm(join(workspace, ".ambient"), { recursive: true, force: true });
   await rm(join(workspace, ".ambient-codex"), { recursive: true, force: true });
   await rm(join(workspace, "docs", "phase5-markdown-regex-proof"), { recursive: true, force: true });
-  for (const path of ["ignored provider key files", "ignored provider key files", "brave_api_key.txt", ".env", ".env.local"]) {
+  for (const path of ["ignored-provider-key-file.txt", "ignored-provider-key-file.txt", "brave_api_key.txt", ".env", ".env.local"]) {
     await rm(join(workspace, path), { force: true });
   }
   await removeCredentialNamedFiles(workspace, 3);

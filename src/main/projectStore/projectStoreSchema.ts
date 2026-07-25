@@ -249,6 +249,7 @@ export const PROJECT_STORE_SCHEMA_BOOTSTRAP_SQL = `
       CREATE TABLE IF NOT EXISTS context_usage_snapshots (
         id TEXT PRIMARY KEY,
         thread_id TEXT NOT NULL,
+        model_id TEXT,
         source TEXT NOT NULL,
         tokens INTEGER,
         context_window INTEGER,
@@ -1188,6 +1189,7 @@ export const PROJECT_STORE_MIGRATION_COLUMN_GROUPS = {
   ],
   runtimeSupport: [
     ["runs", "diagnostics_json", "TEXT"],
+    ["context_usage_snapshots", "model_id", "TEXT"],
     ["message_voice_states", "last_audio_path", "TEXT"],
     ["plugin_trust", "fingerprint", "TEXT"],
     ["permission_audit", "decision_source", "TEXT"],
@@ -1321,13 +1323,11 @@ export const PROJECT_STORE_MIGRATION_COLUMN_GROUPS = {
 } as const;
 
 export type ProjectStoreMigrationColumnGroupKey = keyof typeof PROJECT_STORE_MIGRATION_COLUMN_GROUPS;
-
 export type ProjectStoreSchemaMigrationStep =
   | { kind: "columnGroup"; key: ProjectStoreMigrationColumnGroupKey }
   | { kind: "index"; key: ProjectStoreMigrationIndexKey }
   | { kind: "threadGoalProviderStatusCheck" }
   | { kind: "threadWakeContinuationStatusCheck" };
-
 export const PROJECT_STORE_SCHEMA_MIGRATION_STEPS_BEFORE_ORCHESTRATION_BACKFILL: readonly ProjectStoreSchemaMigrationStep[] = [
   { kind: "columnGroup", key: "coreThreadSubagent" },
   { kind: "index", key: "threadsParentThread" },

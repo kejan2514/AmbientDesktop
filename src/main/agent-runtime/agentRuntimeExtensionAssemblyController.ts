@@ -50,6 +50,7 @@ import {
 } from "./privileged-action/agentRuntimePrivilegedActionTools";
 import { writePrivilegedActionRedactedLog } from "./agentRuntimePrivilegedActionFacade";
 import type { ProjectStore } from "./agentRuntimeProjectStoreFacade";
+import type { AmbientProviderTransportChannel } from "../ambient/ambientProviderTransportActivity";
 
 type ResolveExtensionAssemblyPermission = (
   input:
@@ -146,6 +147,7 @@ export interface AgentRuntimeExtensionAssemblyInput {
   symphonyParentModePolicy?: SymphonyParentModePolicy;
   symphonyParentModeVerifiedLaunch?: SymphonyParentModeVerifiedLaunch;
   getRunningModel?: () => Model<"openai-completions"> | undefined;
+  providerTransportChannel?: AmbientProviderTransportChannel;
 }
 
 export class AgentRuntimeExtensionAssemblyController {
@@ -161,6 +163,7 @@ export class AgentRuntimeExtensionAssemblyController {
         modelProfile: input.modelProfile,
         apiKey,
         getRunningModel: input.getRunningModel,
+        providerTransportChannel: input.providerTransportChannel,
       }),
       ...(input.tencentMemoryExtension ? [input.tencentMemoryExtension] : []),
       this.createGoalModeToolExtension(thread.id),

@@ -198,8 +198,8 @@ async function runDogfood(cdp) {
   if (!state?.provider?.hasApiKey && !credentialStatus.configured) {
     throw new Error(
       launchConfig.providerId === "gmi-cloud"
-        ? "GMI Cloud API key is missing. Configure GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or the ignored ignored provider key files file."
-        : "Ambient API key is missing. Configure AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or the ignored ignored provider key files file.",
+        ? "GMI Cloud API key is missing. Configure GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or the ignored ignored-provider-key-file.txt file."
+        : "Ambient API key is missing. Configure AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or the ignored ignored-provider-key-file.txt file.",
     );
   }
   if (!state?.provider?.hasApiKey) {

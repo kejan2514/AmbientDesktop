@@ -9,9 +9,9 @@ import {
 describe("callAmbientChatCompletionTextWithRetries", () => {
   it("uses bounded direct-helper transport timeouts for the GMI Cloud override", () => {
     expect(ambientChatCompletionTransportTimeoutsFromEnv({ AMBIENT_PROVIDER: "gmi-cloud" } as NodeJS.ProcessEnv)).toEqual({
-      preStreamResponseTimeoutMs: 30_000,
-      streamIdleTimeoutMs: 30_000,
-      streamContentIdleTimeoutMs: 30_000,
+      preStreamResponseTimeoutMs: 60_000,
+      streamIdleTimeoutMs: 120_000,
+      streamContentIdleTimeoutMs: 120_000,
     });
   });
 

@@ -1,4 +1,5 @@
 import type { DesktopEvent, SendMessageInput } from "../../shared/desktopTypes";
+import type { Model } from "@mariozechner/pi-ai";
 import type { PlannerPlanArtifact } from "../../shared/plannerTypes";
 import type { ChatMessage, ThreadSummary } from "../../shared/threadTypes";
 import type {
@@ -30,9 +31,20 @@ import {
 import type { RuntimeToolArgumentWatchdog } from "./runtimeToolArgumentWatchdog";
 import type { RuntimeToolExecutionWatchdog } from "./runtimeToolExecutionWatchdog";
 import type { RuntimeToolMessageController } from "./runtimeToolMessageController";
+import {
+  ambientModel,
+  type AmbientProviderContextOverflow,
+} from "./agentRuntimeAmbientFacade";
+import { getAmbientProviderStatus, normalizeAmbientBaseUrl } from "./agentRuntimeProviderFacade";
+
+export const PROVIDER_CONTEXT_OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS =
+  "Compact this session after the provider reported a stricter combined input/output context limit. Preserve the current task, user intent, completed work, relevant files, constraints, decisions, and blockers while removing transcript bulk that can be rediscovered with tools.";
 
 export interface AgentRuntimePromptOutcomeSession {
   sessionFile?: string | undefined;
+  model?: Model<"openai-completions">;
+  setModel?(model: Model<"openai-completions">): Promise<unknown>;
+  compact?(instructions?: string): Promise<unknown>;
 }
 
 export interface AgentRuntimePromptOutcomeCommitInput {
@@ -85,6 +97,10 @@ export interface AgentRuntimePromptOutcomeControllerOptions {
   schedulePlannerDurableRepairFollowUp: Parameters<typeof finalizeRuntimeSendAfterRun>[0]["schedulePlannerDurableRepairFollowUp"];
   send: Parameters<typeof finalizeRuntimeSendAfterRun>[0]["send"];
   emitError: (message: string, threadId: string, workspacePath: string) => void;
+  learnProviderContextLimit?: (input: {
+    modelId: string;
+    overflow: AmbientProviderContextOverflow;
+  }) => import("../../shared/ambientModels").AmbientModelRuntimeProfile;
 }
 
 export interface HandleAgentRuntimePromptSuccessInput {
@@ -136,6 +152,7 @@ export interface HandleAgentRuntimePromptFailureInput
     | "replaceToolMessage"
   > {
   sendInput: SendMessageInput;
+  session?: AgentRuntimePromptOutcomeSession | undefined;
   runId: string;
   runWorkspacePath: string;
   symphonyParentModeVerifiedLaunch?: SymphonyParentModeVerifiedLaunch | undefined;
@@ -222,6 +239,27 @@ export class AgentRuntimePromptOutcomeController {
         ),
       suppressCallableWorkflowParentAssistantMessages: this.options.suppressCallableWorkflowParentAssistantMessages,
       getThread: () => this.options.getThread(input.sendInput.threadId),
+      recoverProviderContextOverflow:
+        this.options.learnProviderContextLimit && input.session?.setModel && input.session.compact
+        ? async (overflow) => {
+            const thread = this.options.getThread(input.sendInput.threadId);
+            const profile = this.options.learnProviderContextLimit!({ modelId: thread.model, overflow });
+            const provider = getAmbientProviderStatus(thread.model);
+            const model = ambientModel(
+              thread.model,
+              normalizeAmbientBaseUrl(provider.baseUrl),
+              profile,
+              { requestModelId: provider.model },
+            );
+            await input.session!.setModel!(model);
+            await input.session!.compact!(PROVIDER_CONTEXT_OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS);
+            this.options.recordContextUsageSnapshot(input.sendInput.threadId, input.session!);
+            return {
+              effectiveContextWindowTokens: model.contextWindow,
+              requestedOutputTokens: model.maxTokens,
+            };
+          }
+        : undefined,
     });
   }
 

@@ -6,6 +6,7 @@ describe("project store context mappers", () => {
     const row: ContextUsageSnapshotRow = {
       id: "snapshot-1",
       thread_id: "thread-1",
+      model_id: "example/model-id",
       source: "provider",
       tokens: 1200,
       context_window: 200000,
@@ -26,6 +27,7 @@ describe("project store context mappers", () => {
 
     expect(mapContextUsageSnapshotRow(row)).toEqual({
       threadId: "thread-1",
+      modelId: "example/model-id",
       source: "provider",
       tokens: 1200,
       contextWindow: 200000,
@@ -48,6 +50,7 @@ describe("project store context mappers", () => {
   it("keeps nullable context usage snapshot fields undefined", () => {
     expect(mapContextUsageSnapshotRow(baseContextUsageSnapshotRow())).toEqual({
       threadId: "thread-1",
+      modelId: undefined,
       source: "estimate",
       tokens: undefined,
       contextWindow: undefined,
@@ -70,6 +73,7 @@ function baseContextUsageSnapshotRow(): ContextUsageSnapshotRow {
   return {
     id: "snapshot-1",
     thread_id: "thread-1",
+    model_id: null,
     source: "estimate",
     tokens: null,
     context_window: null,

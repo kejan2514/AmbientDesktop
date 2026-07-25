@@ -103,7 +103,7 @@ describe("finalizeRuntimeSendAfterRun", () => {
       input.pendingPlannerRepairFollowUp,
       "/tmp/workspace",
     );
-    expect(timers.map((timer) => timer.delayMs)).toEqual([0, 0, 25]);
+    expect(timers.map((timer) => timer.delayMs)).toEqual([0, 1_000, 25]);
     expect(input.accountFinishedGoalRun).toHaveBeenCalledTimes(1);
     expect(input.scheduleGoalContinuation).not.toHaveBeenCalled();
     expect(input.resolveActiveRunSettled).toHaveBeenCalledTimes(1);
@@ -188,5 +188,51 @@ describe("finalizeRuntimeSendAfterRun", () => {
       internalFollowUpScheduled: true,
     }));
     expect(input.scheduleGoalContinuation).not.toHaveBeenCalled();
+  });
+
+  it("restarts the active goal through the retry scheduled after context-overflow compaction", async () => {
+    const timers: Array<() => void> = [];
+    const overflowRetry = {
+      ...followUp("Retry the compacted prompt"),
+      internal: true as const,
+      retryOfMessageId: "user-1",
+      preserveActiveThread: true as const,
+      assistantFinalizationRetry: {
+        sourceUserMessageId: "user-1",
+        attempt: 1,
+        maxRetries: 1,
+        reason: "provider_context_overflow" as const,
+      },
+    };
+    const input = baseInput({
+      assistantChars: 0,
+      thinkingChars: 0,
+      toolMessageCount: 0,
+      pendingEmptyResponseRetry: overflowRetry,
+      setTimeout: vi.fn((callback) => {
+        timers.push(callback);
+        return timers.length;
+      }),
+    });
+
+    const result = await finalizeRuntimeSendAfterRun(input);
+
+    expect(input.accountFinishedGoalRun).toHaveBeenCalledWith(expect.objectContaining({
+      threadId: "thread-1",
+      goalId: "goal-1",
+      runStatus: "done",
+      internalFollowUpScheduled: true,
+    }));
+    expect(input.scheduleGoalContinuation).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      scheduledFollowUpCount: 1,
+      hasPendingInternalFollowUp: true,
+      scheduledGoalContinuation: false,
+    });
+
+    expect(timers).toHaveLength(1);
+    timers[0]!();
+    await Promise.resolve();
+    expect(input.send).toHaveBeenCalledWith(overflowRetry);
   });
 });

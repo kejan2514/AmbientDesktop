@@ -1161,7 +1161,7 @@ describe("tool message UI model", () => {
   });
 
   it("recognizes ambient cli audioPath JSON stdout without duplicating absolute workspace paths", () => {
-    const workspacePath = "/Users/example/.ambient-hardening/bases/example-core-no-secrets-2026-05-13/workspace";
+    const workspacePath = "/Users/example/.ambient-hardening/bases/example-core-no-secrets/workspace";
     const packageRoot = `${workspacePath}/.ambient/cli-packages/imported/ambient-cartesia-0.1.0`;
     const parsed = parseToolMessage(
       [

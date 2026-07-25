@@ -247,7 +247,7 @@ async function seedWorkspace(workspacePath, userDataPath, gateConfig) {
   if (gateConfig.scenario !== "redaction-ref-identity") return {};
 
   const ordinaryPath = join(workspacePath, "src", "index.ts");
-  const sensitivePath = join(workspacePath, "ignored provider key files");
+  const sensitivePath = join(workspacePath, "ignored-provider-key-file.txt");
   await mkdir(dirname(ordinaryPath), { recursive: true });
   await writeFile(ordinaryPath, "export const phase = 'redaction-ref-identity';\n", "utf8");
   await writeFile(sensitivePath, "test-only placeholder; not a credential\n", "utf8");
@@ -1489,30 +1489,30 @@ function ambientApiKeyFilePath() {
   if (process.env.AMBIENT_API_KEY_FILE) return process.env.AMBIENT_API_KEY_FILE;
   const candidates = [
     join(repoRoot, "ambient_api_key_u.txt"),
-    join(repoRoot, "ignored provider key files"),
+    join(repoRoot, "ignored-provider-key-file.txt"),
     join(dirname(repoRoot), "ambient_api_key_u.txt"),
-    join(dirname(repoRoot), "ignored provider key files"),
+    join(dirname(repoRoot), "ignored-provider-key-file.txt"),
     join(dirname(repoRoot), "ambientCoder", "ambient_api_key_u.txt"),
-    join(dirname(repoRoot), "ambientCoder", "ignored provider key files"),
+    join(dirname(repoRoot), "ambientCoder", "ignored-provider-key-file.txt"),
     join(dirname(dirname(repoRoot)), "ambient_api_key_u.txt"),
-    join(dirname(dirname(repoRoot)), "ignored provider key files"),
+    join(dirname(dirname(repoRoot)), "ignored-provider-key-file.txt"),
     join(homedir(), "Documents", "ambientCoder", "ambient_api_key_u.txt"),
-    join(homedir(), "Documents", "ambientCoder", "ignored provider key files"),
+    join(homedir(), "Documents", "ambientCoder", "ignored-provider-key-file.txt"),
     join(homedir(), "Documents", "New project 3", "ambient_api_key_u.txt"),
-    join(homedir(), "Documents", "New project 3", "ignored provider key files"),
+    join(homedir(), "Documents", "New project 3", "ignored-provider-key-file.txt"),
   ];
   for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate;
   }
   let current = repoRoot;
   for (let depth = 0; depth < 8; depth += 1) {
-    const candidate = join(current, "ignored provider key files");
+    const candidate = join(current, "ignored-provider-key-file.txt");
     if (existsSync(candidate)) return candidate;
     const parent = dirname(current);
     if (parent === current) break;
     current = parent;
   }
-  return join(repoRoot, "ignored provider key files");
+  return join(repoRoot, "ignored-provider-key-file.txt");
 }
 
 function cleanChildEnv(env) {

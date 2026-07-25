@@ -33,9 +33,10 @@ import {
 } from "./agentRuntimeProviderContextPreflight";
 import { getAmbientProviderStatus, normalizeAmbientBaseUrl } from "./agentRuntimeProviderFacade";
 import type { ProjectStore } from "./agentRuntimeProjectStoreFacade";
+import type { AmbientProviderTransportChannel } from "../ambient/ambientProviderTransportActivity";
 
 type ModelContextSession = ContextAccountingSession & {
-  model?: { contextWindow?: number };
+  model?: { contextWindow?: number; maxTokens?: number };
 };
 
 export interface AgentRuntimeModelContextControllerOptions {
@@ -58,6 +59,7 @@ export interface AgentRuntimeModelContextExtensionFactoriesInput {
   modelProfile?: AmbientModelRuntimeProfile;
   apiKey?: string;
   getRunningModel?: () => Model<"openai-completions"> | undefined;
+  providerTransportChannel?: AmbientProviderTransportChannel;
 }
 
 export class AgentRuntimeModelContextController {
@@ -72,7 +74,12 @@ export class AgentRuntimeModelContextController {
       this.createAmbientCompactionSummaryExtension(input.thread.id, input.workspace, input.model, input.apiKey),
       this.createProviderCallContextPreflightExtension(input.thread.id, input.workspace.path, input.model),
       this.createModelReasoningPayloadExtension(input.thread.id, input.model, input.modelProfile),
-      this.createContextAccountingExtension(input.thread.id, input.model),
+      this.createContextAccountingExtension(
+        input.thread.id,
+        input.model,
+        input.providerTransportChannel,
+        input.getRunningModel,
+      ),
     ];
   }
 
@@ -86,6 +93,7 @@ export class AgentRuntimeModelContextController {
       workspacePath,
       contextWindow: model.contextWindow,
       getContextWindow: () => this.currentProviderContextWindow(threadId, model.contextWindow),
+      requestedOutputTokens: model.maxTokens,
       reserveTokens: compactionSettings.reserveTokens,
       hardPreflightPercent: compactionSettings.hardPreflightPercent,
     });
@@ -104,15 +112,25 @@ export class AgentRuntimeModelContextController {
     });
   }
 
-  createContextAccountingExtension(threadId: string, model: Model<"openai-completions">): ExtensionFactory {
+  createContextAccountingExtension(
+    threadId: string,
+    model: Model<"openai-completions">,
+    providerTransportChannel?: AmbientProviderTransportChannel,
+    getRunningModel?: () => Model<"openai-completions"> | undefined,
+  ): ExtensionFactory {
     return createContextAccountingToolsExtension({
       threadId,
+      modelId: model.id,
       contextWindow: model.contextWindow,
+      getRunningModel,
       getActiveSession: (id) => this.options.getActiveSession(id),
       compactionStatsFromEntries: (entries) => contextUsageCompactionStatsFromEntries(entries),
       countSerializedPayload: (payload, fallbackTokens) => this.options.countSerializedPayload(payload, fallbackTokens),
       recordContextUsageSnapshot: (snapshot) => this.options.recordContextUsageSnapshot(snapshot),
       emitContextUsageUpdated: (snapshot) => this.options.emitContextUsageUpdated(snapshot),
+      onProviderRequestPrepared: ({ inputTokens }) => {
+        providerTransportChannel?.publish({ kind: "request_prepared", inputTokens });
+      },
       fileExists: this.options.fileExists ?? existsSync,
     });
   }

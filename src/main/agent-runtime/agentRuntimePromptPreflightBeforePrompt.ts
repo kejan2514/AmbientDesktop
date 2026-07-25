@@ -78,6 +78,7 @@ export async function runAgentRuntimePromptPreflightBeforePrompt<TSession extend
     session: input.session,
     promptContent: input.promptContent,
     contextWindow: input.session.model?.contextWindow ?? input.unavailableContextWindow,
+    requestedOutputTokens: input.session.model?.maxTokens,
     reserveTokens: input.compactionSettings.reserveTokens,
     hardPreflightPercent: input.compactionSettings.hardPreflightPercent,
   };

@@ -4,7 +4,6 @@ import {
   goalCompletionChatMessage,
   goalRuntimeActivity,
   GOAL_COMPLETION_MESSAGE_KIND,
-  GOAL_MAX_CONTINUATION_TURNS,
   GOAL_MODE_TOOL_NAMES,
   GOAL_NO_PROGRESS_TURN_LIMIT,
   GOAL_PROVIDER_INFRA_FAILURE_LIMIT,
@@ -14,7 +13,6 @@ describe("agentRuntimeGoalRuntime", () => {
   it("exports the goal mode runtime constants used by AgentRuntime", () => {
     expect(GOAL_MODE_TOOL_NAMES).toEqual(["get_goal", "create_goal", "update_goal"]);
     expect(GOAL_COMPLETION_MESSAGE_KIND).toBe("goal-completion");
-    expect(GOAL_MAX_CONTINUATION_TURNS).toBe(8);
     expect(GOAL_NO_PROGRESS_TURN_LIMIT).toBe(3);
     expect(GOAL_PROVIDER_INFRA_FAILURE_LIMIT).toBe(2);
   });

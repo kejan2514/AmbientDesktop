@@ -191,7 +191,7 @@ function preflight(env) {
   requireDirectory(env.AMBIENT_PROJECT_BOARD_DIRECT_HELPER_RETRY_SNAPSHOT_USER_DATA, "AMBIENT_PROJECT_BOARD_DIRECT_HELPER_RETRY_SNAPSHOT_USER_DATA", missing);
   requireDirectory(env.AMBIENT_PROJECT_BOARD_DIRECT_HELPER_RETRY_SNAPSHOT_WORKSPACE, "AMBIENT_PROJECT_BOARD_DIRECT_HELPER_RETRY_SNAPSHOT_WORKSPACE", missing);
   if (!hasGmiCredential(env)) {
-    missing.push("GMI Cloud credential env or ignored ignored provider key files");
+    missing.push("GMI Cloud credential env or ignored ignored-provider-key-file.txt");
   }
   if (missing.length > 0) {
     throw new Error(`Cannot run aggressive retries GMI release gate; configure: ${missing.join(", ")}.`);
@@ -203,7 +203,7 @@ function requireDirectory(path, label, missing) {
 }
 
 function hasGmiCredential(env) {
-  return Boolean(env.GMI_CLOUD_API_KEY || env.GMI_API_KEY || env.GMI_CLOUD_API_KEY_FILE || existsSync(join(repoRoot, "ignored provider key files")));
+  return Boolean(env.GMI_CLOUD_API_KEY || env.GMI_API_KEY || env.GMI_CLOUD_API_KEY_FILE || existsSync(join(repoRoot, "ignored-provider-key-file.txt")));
 }
 
 async function runLane(input) {

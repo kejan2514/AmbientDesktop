@@ -244,9 +244,9 @@ describe("meta harness eval runner helpers", () => {
   });
 
   it("redacts known secret values and env-shaped secrets in artifacts", () => {
-    const redacted = redactArtifactText("AMBIENT_API_KEY=abc123xyz and literal-real-secret", ["literal-real-secret"]);
+    const redacted = redactArtifactText("AMBIENT_API_KEY_FILE=<ignored-key-file> and literal-real-secret", ["literal-real-secret"]);
 
-    expect(redacted).toBe("AMBIENT_API_KEY=[redacted] and [redacted secret]");
+    expect(redacted).toBe("AMBIENT_API_KEY_FILE=<ignored-key-file> and [redacted secret]");
   });
 
   it("persists planned rows during dry runs for downstream judge/report stages", async () => {

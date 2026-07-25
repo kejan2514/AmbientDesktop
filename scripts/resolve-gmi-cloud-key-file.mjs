@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const candidates = [
-  join(repoRoot, "ignored provider key files"),
-  join(dirname(repoRoot), "ignored provider key files"),
-  join(dirname(repoRoot), "ambientCoder", "ignored provider key files"),
-  join(homedir(), "ambientCoder", "ignored provider key files"),
-  join(homedir(), "Documents", "ambientCoder", "ignored provider key files"),
+  join(repoRoot, "ignored-provider-key-file.txt"),
+  join(dirname(repoRoot), "ignored-provider-key-file.txt"),
+  join(dirname(repoRoot), "ambientCoder", "ignored-provider-key-file.txt"),
+  join(homedir(), "ambientCoder", "ignored-provider-key-file.txt"),
+  join(homedir(), "Documents", "ambientCoder", "ignored-provider-key-file.txt"),
 ];
 
 const match = candidates.find((candidate) => existsSync(candidate));

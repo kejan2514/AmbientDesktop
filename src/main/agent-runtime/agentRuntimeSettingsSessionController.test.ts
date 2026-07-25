@@ -97,6 +97,15 @@ describe("AgentRuntimeSettingsSessionController", () => {
       deferredThreadIds: [],
     });
     expect(harness.switchSessionToThreadModel).toHaveBeenCalledWith(harness.threads.idle, idle);
+    expect(harness.recordUnavailableContextUsageSnapshot).toHaveBeenCalledTimes(2);
+    expect(harness.emit).toHaveBeenCalledWith(expect.objectContaining({
+      type: "context-usage-updated",
+      snapshot: expect.objectContaining({ threadId: "missing", modelId: "new-model" }),
+    }));
+    expect(harness.emit).toHaveBeenCalledWith(expect.objectContaining({
+      type: "context-usage-updated",
+      snapshot: expect.objectContaining({ threadId: "active", modelId: "new-model" }),
+    }));
   });
 
   it("applies thread memory settings to only the requested cached session", () => {
@@ -144,6 +153,15 @@ function controllerHarness(input: {
   const threads = input.threads ?? {};
   const emit = vi.fn();
   const switchSessionToThreadModel = vi.fn(async () => undefined);
+  const recordUnavailableContextUsageSnapshot = vi.fn((currentThread: ThreadSummary, message: string) => ({
+    threadId: currentThread.id,
+    modelId: currentThread.model,
+    source: "unavailable" as const,
+    contextWindow: 200_000,
+    compactionCount: 0,
+    updatedAt: "2026-07-22T00:00:00.000Z",
+    diagnostics: { activeSession: false, message },
+  }));
   const controller = new AgentRuntimeSettingsSessionController({
     sessions,
     activeRuns,
@@ -151,12 +169,14 @@ function controllerHarness(input: {
     tencentMemoryRuntimeSnapshots,
     getThread: (threadId) => threads[threadId] ?? thread(threadId, "kimi"),
     switchSessionToThreadModel,
+    recordUnavailableContextUsageSnapshot,
     emit,
   });
   return {
     controller,
     emit,
     switchSessionToThreadModel,
+    recordUnavailableContextUsageSnapshot,
     ambientCliSkillMountDiagnostics,
     tencentMemoryRuntimeSnapshots,
     threads,

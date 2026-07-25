@@ -115,6 +115,45 @@ describe("createRuntimeStreamWatchdogController", () => {
     }
   });
 
+  it("treats raw transport activity as liveness without inventing semantic events", () => {
+    vi.useFakeTimers();
+    try {
+      const input = baseInput();
+      const watchdog = createRuntimeStreamWatchdogController(input);
+
+      vi.advanceTimersByTime(1_400);
+      watchdog.markTransportActivity();
+      expect(input.state.streamEventCount).toBe(0);
+      vi.advanceTimersByTime(999);
+      expect(input.abortSessionRun).not.toHaveBeenCalled();
+      watchdog.markTransportActivity();
+      vi.advanceTimersByTime(1_000);
+
+      expect(input.timeoutMessage).toBe("Ambient/Pi stream stalled after 1000ms without stream activity.");
+      expect(input.abortSessionRun).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses an adaptive pre-stream deadline until response transport begins", () => {
+    vi.useFakeTimers();
+    try {
+      const input = baseInput();
+      const watchdog = createRuntimeStreamWatchdogController(input);
+
+      watchdog.setPreStreamTimeoutMs(3_000);
+      vi.advanceTimersByTime(2_999);
+      expect(input.abortSessionRun).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+
+      expect(input.timeoutMessage).toBe("Ambient/Pi did not start streaming within 3000ms.");
+      expect(input.abortSessionRun).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("pauses instead of timing out while permission or tool activity is active", () => {
     vi.useFakeTimers();
     try {
@@ -130,6 +169,7 @@ describe("createRuntimeStreamWatchdogController", () => {
 
       externalActivity = false;
       input.state.streamEventCount = 1;
+      watchdog.reset();
       watchdog.resume();
       vi.advanceTimersByTime(1_000);
 
@@ -156,7 +196,7 @@ describe("createRuntimeStreamWatchdogController", () => {
 
       externalActivity = false;
       watchdog.resume();
-      vi.advanceTimersByTime(1_000);
+      vi.advanceTimersByTime(1_500);
       expect(input.abortSessionRun).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();

@@ -386,17 +386,17 @@ function readLiveAmbientApiKey(): string {
   const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
   const candidates = [
     process.env.AMBIENT_API_KEY_FILE,
-    join(repoRoot, "ignored provider key files"),
-    join(dirname(repoRoot), "ignored provider key files"),
-    join(dirname(dirname(repoRoot)), "ignored provider key files"),
-    "/Users/example/Documents/ambientCoder/ignored provider key files",
+    join(repoRoot, "ignored-provider-key-file.txt"),
+    join(dirname(repoRoot), "ignored-provider-key-file.txt"),
+    join(dirname(dirname(repoRoot)), "ignored-provider-key-file.txt"),
+    "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
   ].filter((candidate): candidate is string => Boolean(candidate));
   for (const candidate of candidates) {
     if (!existsSync(candidate)) continue;
     const key = readFileSync(candidate, "utf8").trim();
     if (key) return key;
   }
-  throw new Error("Set AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or place ignored provider key files near the repo.");
+  throw new Error("Set AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or place ignored-provider-key-file.txt near the repo.");
 }
 
 function readSourceRevision(): { gitHead?: string; dirty?: boolean } {

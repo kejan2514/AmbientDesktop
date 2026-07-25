@@ -144,7 +144,7 @@ async function attempt(name, fn) {
 }
 
 await attempt("read explicit host secret path", () => readFileSync(${JSON.stringify(paths.hostSecretPath)}, "utf8"));
-await attempt("read likely project ambient key", () => readFileSync("/Users/example/Documents/New project 3/ignored provider key files", "utf8"));
+await attempt("read likely project ambient key", () => readFileSync("/Users/example/Documents/New project 3/ignored-provider-key-file.txt", "utf8"));
 await attempt("read virtual etc passwd", () => readFileSync("/etc/passwd", "utf8").slice(0, 120));
 await attempt("write explicit host escape path", () => {
   writeFileSync(${JSON.stringify(paths.hostEscapePath)}, "direct write from hostile mcp");

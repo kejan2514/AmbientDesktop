@@ -3,6 +3,7 @@ import type { ContextUsageSnapshot } from "../../shared/threadTypes";
 export interface ContextUsageSnapshotRow {
   id: string;
   thread_id: string;
+  model_id: string | null;
   source: ContextUsageSnapshot["source"];
   tokens: number | null;
   context_window: number | null;
@@ -16,6 +17,7 @@ export interface ContextUsageSnapshotRow {
 export function mapContextUsageSnapshotRow(row: ContextUsageSnapshotRow): ContextUsageSnapshot {
   return {
     threadId: row.thread_id,
+    modelId: row.model_id ?? undefined,
     source: row.source,
     tokens: row.tokens ?? undefined,
     contextWindow: row.context_window ?? undefined,

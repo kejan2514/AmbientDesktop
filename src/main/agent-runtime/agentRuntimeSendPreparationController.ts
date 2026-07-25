@@ -130,9 +130,10 @@ export class AgentRuntimeSendPreparationController {
       ? this.options.workflowRecordingReviewStreamIdleTimeoutMs
       : modelRuntimeSettingsForRun.providerStreamIdleTimeoutMs ?? DEFAULT_MODEL_RUNTIME_PROVIDER_STREAM_IDLE_TIMEOUT_MS;
     const defaultToolExecutionIdleTimeoutMs = this.options.localToolIdleTimeoutMs();
-    const emptyAssistantStallTimeoutMs = usesDedicatedReviewSession
-      ? Math.min(this.options.chatPiEmptyAssistantStallTimeoutMs, this.options.workflowRecordingReviewStreamIdleTimeoutMs)
-      : this.options.chatPiEmptyAssistantStallTimeoutMs;
+    const emptyAssistantStallTimeoutMs = Math.max(
+      this.options.chatPiEmptyAssistantStallTimeoutMs,
+      piStreamIdleTimeoutMs,
+    );
     const configuredAssistantFinalizationRetryMaxRetries = assistantFinalizationRetryMaxRetriesFromSettings(
       modelRuntimeSettingsForRun,
     );

@@ -84,7 +84,7 @@ describe("credentialStore", () => {
 
   it("uses Ambient API key file environment values when Electron app storage is unavailable", async () => {
     const userDataPath = await mkdtemp(join(tmpdir(), "ambient-credential-store-"));
-    const keyFile = join(userDataPath, "ignored provider key files");
+    const keyFile = join(userDataPath, "ignored-provider-key-file.txt");
     await writeFile(keyFile, "ambient-file-key\n", "utf8");
     delete process.env.AMBIENT_API_KEY;
     delete process.env.AMBIENT_AGENT_AMBIENT_API_KEY;
@@ -230,7 +230,7 @@ describe("credentialStore", () => {
     if (!testCwd) throw new Error("missing test cwd");
     const siblingCheckout = join(dirname(testCwd), "ambientCoder");
     await mkdir(siblingCheckout, { recursive: true });
-    await writeFile(join(siblingCheckout, "ignored provider key files"), "gmi-sibling-key\n", "utf8");
+    await writeFile(join(siblingCheckout, "ignored-provider-key-file.txt"), "gmi-sibling-key\n", "utf8");
     delete process.env.AMBIENT_API_KEY;
     delete process.env.AMBIENT_AGENT_AMBIENT_API_KEY;
     delete process.env.GMI_CLOUD_API_KEY;

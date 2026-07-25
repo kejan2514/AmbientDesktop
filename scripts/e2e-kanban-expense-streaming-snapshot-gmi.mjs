@@ -16,7 +16,7 @@ const reportPath = resolve(process.env.AMBIENT_KANBAN_EXPENSE_STREAMING_OUT || j
 const screenshotPath = join(runRoot, "phase3-expense-streaming-snapshot.png");
 const cdpPort = Number(process.env.AMBIENT_KANBAN_EXPENSE_STREAMING_CDP_PORT || 0) || (await availablePort());
 const evaluateTimeoutMs = Number(process.env.AMBIENT_KANBAN_EXPENSE_STREAMING_EVALUATE_TIMEOUT_MS || 120_000);
-const keyFile = resolve(process.env.GMI_CLOUD_API_KEY_FILE || join(repoRoot, "ignored provider key files"));
+const keyFile = resolve(process.env.GMI_CLOUD_API_KEY_FILE || join(repoRoot, "ignored-provider-key-file.txt"));
 const defaultSnapshotWorkspace = join(homedir(), "Documents", "ambientCoderArchive");
 const sourceWorkspace =
   process.env.AMBIENT_KANBAN_EXPENSE_STREAMING_WORKSPACE ||

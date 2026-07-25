@@ -93,7 +93,7 @@ async function launchApp() {
 async function runSttQueueBargeLiveSmoke(cdp) {
   const state = await desktopState(cdp);
   if (!state.provider.hasApiKey) {
-    throw new Error("Ambient API key is missing. Set AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or place ignored provider key files near the repo.");
+    throw new Error("Ambient API key is missing. Set AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or place ignored-provider-key-file.txt near the repo.");
   }
   const keyCheck = await evaluate(cdp, "window.ambientDesktop.testAmbientApiKey()");
   if (!keyCheck?.ok) throw new Error(`Ambient API key check failed: ${keyCheck?.message ?? "unknown error"}`);
@@ -479,12 +479,12 @@ async function readAmbientApiKey() {
   if (existing?.trim()) return existing.trim();
   const candidates = [
     process.env.AMBIENT_API_KEY_FILE,
-    join(process.cwd(), "ignored provider key files"),
-    join(dirname(process.cwd()), "ignored provider key files"),
-    join(dirname(dirname(process.cwd())), "ignored provider key files"),
-    join(homedir(), "ignored provider key files"),
-    "/Users/example/Documents/ambientCoder/ignored provider key files",
-    "/Users/example/Documents/New project 3/ignored provider key files",
+    join(process.cwd(), "ignored-provider-key-file.txt"),
+    join(dirname(process.cwd()), "ignored-provider-key-file.txt"),
+    join(dirname(dirname(process.cwd())), "ignored-provider-key-file.txt"),
+    join(homedir(), "ignored-provider-key-file.txt"),
+    "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
+    "/Users/example/Documents/New project 3/ignored-provider-key-file.txt",
   ].filter(Boolean);
   for (const candidate of candidates) {
     try {

@@ -22,7 +22,7 @@ const report = {
 let appInstance;
 try {
   const ambientApiKey = await readAmbientApiKey();
-  if (!ambientApiKey) throw new Error("Set AMBIENT_API_KEY or provide ignored provider key files before running local restart dogfood.");
+  if (!ambientApiKey) throw new Error("Set AMBIENT_API_KEY or provide ignored-provider-key-file.txt before running local restart dogfood.");
 
   await seedProject(project);
   await mkdir(userData, { recursive: true });
@@ -228,9 +228,9 @@ async function readAmbientApiKey() {
   if (existing?.trim()) return existing.trim();
   const candidates = [
     process.env.AMBIENT_API_KEY_FILE,
-    join(process.cwd(), "ignored provider key files"),
-    join(dirname(process.cwd()), "ignored provider key files"),
-    "/Users/example/Documents/ambientCoder/ignored provider key files",
+    join(process.cwd(), "ignored-provider-key-file.txt"),
+    join(dirname(process.cwd()), "ignored-provider-key-file.txt"),
+    "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
   ].filter(Boolean);
   for (const candidate of candidates) {
     try {

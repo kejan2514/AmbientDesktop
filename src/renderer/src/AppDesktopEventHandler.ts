@@ -1,6 +1,7 @@
 import { startTransition } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
+import { normalizeAmbientModelId } from "../../shared/ambientModels";
 import type { DesktopEvent, DesktopState, MenuCommand } from "../../shared/desktopTypes";
 import type { AmbientCliSecretDialogInput } from "./AppCredentialDialogActions";
 import { chatBrowserUserActionForThread } from "./AppChatChrome";
@@ -330,9 +331,16 @@ export function handleAppDesktopEvent(event: DesktopEvent, deps: AppDesktopEvent
   }
   if (event.type === "context-usage-updated") {
     if (!deps.desktopEventMatchesActiveProject(event)) return;
-    deps.setState((current) =>
-      current && current.activeThreadId === event.snapshot.threadId ? { ...current, contextUsage: event.snapshot } : current,
-    );
+    deps.setState((current) => {
+      if (!current || current.activeThreadId !== event.snapshot.threadId) return current;
+      if (
+        event.snapshot.modelId === undefined ||
+        normalizeAmbientModelId(event.snapshot.modelId) !== normalizeAmbientModelId(current.settings.model)
+      ) {
+        return current;
+      }
+      return { ...current, contextUsage: event.snapshot };
+    });
     return;
   }
   if (event.type === "error") {

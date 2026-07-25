@@ -106,6 +106,33 @@ describe("AgentRuntimeContextRecoveryController", () => {
     });
   });
 
+  it("does not reuse a persisted context snapshot from a different model", async () => {
+    await withController(async ({ store, controller }) => {
+      const thread = store.createThread("model-scoped context");
+      store.recordContextUsageSnapshot({
+        threadId: thread.id,
+        modelId: "old-model",
+        source: "estimate",
+        tokens: 100_000,
+        contextWindow: 80_000,
+        percent: 125,
+        compactionCount: 0,
+      });
+
+      const snapshot = await controller.getContextUsage(thread.id);
+
+      expect(snapshot).toMatchObject({
+        threadId: thread.id,
+        modelId: thread.model,
+        source: "unavailable",
+        percent: undefined,
+        diagnostics: expect.objectContaining({
+          message: "The selected model has not reported context usage yet.",
+        }),
+      });
+    });
+  });
+
   it("runs manual compaction, commits the session file, and returns to idle", async () => {
     await withController(async ({ store, controller, emitted, getSession }) => {
       const workspace = store.getWorkspace();
@@ -300,6 +327,7 @@ function fakePiSession(sessionFile: string): AgentRuntimeContextRecoverySession 
       getEntries: () => [],
     },
     model: {
+      id: "example/model-id",
       contextWindow: 128_000,
     },
     getContextUsage: () => ({

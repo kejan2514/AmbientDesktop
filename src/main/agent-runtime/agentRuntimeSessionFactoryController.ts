@@ -26,6 +26,11 @@ import {
 import type { ContextUsageSnapshot, ThreadSummary } from "../../shared/threadTypes";
 import type { WorkspaceState } from "../../shared/workspaceTypes";
 import {
+  attachAmbientProviderTransportChannelForSession,
+  bindAmbientProviderTransportChannel,
+  createAmbientProviderTransportChannel,
+} from "../ambient/ambientProviderTransportActivity";
+import {
   AMBIENT_DEFAULT_ACTIVE_TOOL_NAMES,
   ambientModel,
   createAmbientToolRouterTools,
@@ -160,12 +165,23 @@ export class AgentRuntimeSessionFactoryController {
 
   async switchSessionToThreadModel(thread: ThreadSummary, session: AgentRuntimePiSession): Promise<void> {
     const provider = getAmbientProviderStatus(thread.model);
-    const model = ambientModel(thread.model, normalizeAmbientBaseUrl(provider.baseUrl), this.resolveModelRuntimeProfile(thread.model));
+    const model = ambientModel(
+      thread.model,
+      normalizeAmbientBaseUrl(provider.baseUrl),
+      this.resolveModelRuntimeProfile(thread.model),
+      { requestModelId: provider.model },
+    );
     if (!sessionModelDescriptorMatches(session.model, model)) {
+      attachAmbientProviderTransportChannelForSession(model, session);
       await session.setModel(model);
     }
     session.setThinkingLevel(thread.thinkingLevel);
     this.options.sessions.clearRuntimeSettingsStale(thread.id);
+    this.options.recordContextUsageSnapshot(
+      thread.id,
+      session,
+      "Context usage refreshed after the model changed.",
+    );
     if (session.sessionFile) {
       await this.options.commitThreadPiSessionFile({
         threadId: thread.id,
@@ -195,7 +211,12 @@ export class AgentRuntimeSessionFactoryController {
       } else {
         const existing = existingPlan.session;
         const provider = getAmbientProviderStatus(thread.model);
-        const targetModel = ambientModel(thread.model, normalizeAmbientBaseUrl(provider.baseUrl), this.resolveModelRuntimeProfile(thread.model));
+        const targetModel = ambientModel(
+          thread.model,
+          normalizeAmbientBaseUrl(provider.baseUrl),
+          this.resolveModelRuntimeProfile(thread.model),
+          { requestModelId: provider.model },
+        );
         if (!sessionModelDescriptorMatches(existing.model, targetModel)) {
           await this.switchSessionToThreadModel(thread, existing);
         }
@@ -240,7 +261,13 @@ export class AgentRuntimeSessionFactoryController {
     const provider = getAmbientProviderStatus(thread.model);
     const apiKey = readAmbientApiKey();
     const modelProfile = this.resolveModelRuntimeProfile(thread.model);
-    const model = ambientModel(thread.model, normalizeAmbientBaseUrl(provider.baseUrl), modelProfile);
+    const model = ambientModel(
+      thread.model,
+      normalizeAmbientBaseUrl(provider.baseUrl),
+      modelProfile,
+      { requestModelId: provider.model },
+    );
+    const providerTransportChannel = createAmbientProviderTransportChannel(model);
     let tencentMemoryExtension: ExtensionFactory | undefined;
     let memoryToolNames: string[] = [];
     if (tencentMemoryActive) {
@@ -359,6 +386,7 @@ export class AgentRuntimeSessionFactoryController {
       symphonyParentModePolicy,
       symphonyParentModeVerifiedLaunch,
       getRunningModel: () => sessionForModelStatus.current?.model,
+      providerTransportChannel,
     });
 
     const resourceLoader = new DefaultResourceLoader({
@@ -518,6 +546,7 @@ export class AgentRuntimeSessionFactoryController {
     });
     sessionForAmbientToolRouter.current = session;
     sessionForModelStatus.current = session;
+    bindAmbientProviderTransportChannel(session, providerTransportChannel);
     session.agent.toolExecution = "sequential";
     await session.bindExtensions({});
     this.options.sessions.set({

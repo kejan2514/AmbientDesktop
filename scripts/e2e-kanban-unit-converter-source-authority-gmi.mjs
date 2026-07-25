@@ -22,8 +22,8 @@ const finalCharterScreenshotPath = join(runRoot, "phase6-source-authority-final-
 const cdpPort = Number(process.env.AMBIENT_KANBAN_UNIT_CONVERTER_SOURCE_AUTHORITY_CDP_PORT || 0) || (await availablePort());
 const reviewMaxElapsedMs = Number(process.env.AMBIENT_KANBAN_UNIT_CONVERTER_SOURCE_AUTHORITY_MAX_TIMEOUT_MS || 0) || 900_000;
 const reviewIdleMs = Number(process.env.AMBIENT_KANBAN_UNIT_CONVERTER_SOURCE_AUTHORITY_IDLE_TIMEOUT_MS || 0) || 240_000;
-const defaultRepoKeyFile = join(repoRoot, "ignored provider key files");
-const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored provider key files");
+const defaultRepoKeyFile = join(repoRoot, "ignored-provider-key-file.txt");
+const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored-provider-key-file.txt");
 const keyFile = resolve(
   process.env.GMI_CLOUD_API_KEY_FILE ||
     (existsSync(defaultRepoKeyFile) ? defaultRepoKeyFile : defaultHomeCheckoutKeyFile),

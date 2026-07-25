@@ -78,7 +78,7 @@ describe("AgentRuntimeSendPreparationController", () => {
         hasWorkflowPlanEditIntent: false,
         runWorkspacePath: store.getWorkspace().path,
         defaultToolExecutionIdleTimeoutMs: 9_000,
-        emptyAssistantStallTimeoutMs: 12_000,
+        emptyAssistantStallTimeoutMs: 120_000,
         shouldInjectBootstrap: true,
         retrySourceUserMessageId: messages[0].id,
         interruptedToolCallRecoveryMaxRetries: 3,
@@ -245,7 +245,7 @@ describe("AgentRuntimeSendPreparationController", () => {
       expect(context.modelRuntimeSettingsForRun.aggressiveRetries).toBe(true);
       expect(context.piPreStreamTimeoutMs).toBe(42_000);
       expect(context.piStreamIdleTimeoutMs).toBe(42_000);
-      expect(context.emptyAssistantStallTimeoutMs).toBe(12_000);
+      expect(context.emptyAssistantStallTimeoutMs).toBe(42_000);
       expect(context.canScheduleInterruptedToolCallRecovery).toBe(false);
     });
   });

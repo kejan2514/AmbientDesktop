@@ -25,6 +25,7 @@ describeNative("ProjectStore thread context and lifecycle facade (requires Node 
     const thread = store.createThread("Context accounting");
     const snapshot = store.recordContextUsageSnapshot({
       threadId: thread.id,
+      modelId: "example/model-id",
       source: "provider-plus-estimate",
       tokens: 42_000,
       contextWindow: 200_000,
@@ -41,6 +42,7 @@ describeNative("ProjectStore thread context and lifecycle facade (requires Node 
 
     expect(snapshot).toMatchObject({
       threadId: thread.id,
+      modelId: "example/model-id",
       source: "provider-plus-estimate",
       tokens: 42_000,
       contextWindow: 200_000,

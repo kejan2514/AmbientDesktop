@@ -1,7 +1,7 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { DesktopEvent } from "../../shared/desktopTypes";
+import type { DesktopEvent, DesktopState } from "../../shared/desktopTypes";
 import type { PermissionRequest } from "../../shared/permissionTypes";
 import {
   createAppDesktopEventHandlerDependencies,
@@ -188,6 +188,47 @@ describe("App desktop event handler", () => {
     }, deps);
 
     expect(lines).toEqual([{ text: "Planning the next move.", kind: "thinking" }]);
+  });
+
+  it("ignores late context snapshots from the model that was switched away from", () => {
+    const state = stateCell<DesktopState | undefined>({
+      activeThreadId: "thread-1",
+      settings: { model: "new-model" },
+      contextUsage: undefined,
+    } as DesktopState);
+    const deps = appDesktopEventHandlerDependencies({ setState: state.set });
+
+    handleAppDesktopEvent({
+      type: "context-usage-updated",
+      snapshot: {
+        threadId: "thread-1",
+        modelId: "old-model",
+        source: "estimate",
+        tokens: 100_000,
+        contextWindow: 80_000,
+        percent: 125,
+        compactionCount: 0,
+        updatedAt: "2026-07-22T00:00:00.000Z",
+      },
+    }, deps);
+
+    expect(state.current?.contextUsage).toBeUndefined();
+
+    handleAppDesktopEvent({
+      type: "context-usage-updated",
+      snapshot: {
+        threadId: "thread-1",
+        modelId: "new-model",
+        source: "estimate",
+        tokens: 20_000,
+        contextWindow: 200_000,
+        percent: 10,
+        compactionCount: 0,
+        updatedAt: "2026-07-22T00:00:01.000Z",
+      },
+    }, deps);
+
+    expect(state.current?.contextUsage).toMatchObject({ modelId: "new-model", percent: 10 });
   });
 });
 

@@ -1,10 +1,7 @@
 import type { DesktopEvent } from "../../shared/desktopTypes";
 import type { PiStreamTraceReference } from "./provider-continuation/agentRuntimeProviderDiagnostics";
 import { runtimePiStreamTimeoutActivity } from "../agent-runtime/agentRuntimeStreamState";
-import {
-  piStreamStallTimeoutMessage,
-  piStreamStartTimeoutMessage,
-} from "../agent-runtime/agentRuntimeTimeouts";
+import { piStreamStallTimeoutMessage, piStreamStartTimeoutMessage } from "../agent-runtime/agentRuntimeTimeouts";
 import { createPiStreamWatchdog, type PiStreamWatchdog } from "./agentRuntimePiFacade";
 
 export interface RuntimeStreamWatchdogState {
@@ -34,6 +31,8 @@ export interface RuntimeStreamWatchdogController {
   pause: () => void;
   resume: () => void;
   reset: () => void;
+  markTransportActivity: () => void;
+  setPreStreamTimeoutMs: (timeoutMs: number) => void;
   stop: () => void;
   pauseIfNeeded: () => void;
 }
@@ -41,7 +40,8 @@ export interface RuntimeStreamWatchdogController {
 export function createRuntimeStreamWatchdogController(
   input: RuntimeStreamWatchdogControllerInput,
 ): RuntimeStreamWatchdogController {
-  let watchdog: PiStreamWatchdog;
+  let transportStarted = false;
+  let preStreamTimeoutMs = input.preStreamTimeoutMs;
 
   const handleTimeout = () => {
     if (!input.isRunStoreActive()) return;
@@ -50,11 +50,10 @@ export function createRuntimeStreamWatchdogController(
       return;
     }
     const state = input.getState();
-    const hasStreamEvents = state.streamEventCount > 0;
-    const timeoutMs = hasStreamEvents ? input.idleTimeoutMs : input.preStreamTimeoutMs;
-    const message = hasStreamEvents
+    const timeoutMs = transportStarted ? input.idleTimeoutMs : preStreamTimeoutMs;
+    const message = transportStarted
       ? piStreamStallTimeoutMessage(input.idleTimeoutMs)
-      : piStreamStartTimeoutMessage(input.preStreamTimeoutMs);
+      : piStreamStartTimeoutMessage(preStreamTimeoutMs);
     input.markStreamTimedOut();
     input.setStreamTimeoutMessage(message);
     const trace = input.persistPiStreamTrace(message);
@@ -73,7 +72,7 @@ export function createRuntimeStreamWatchdogController(
     input.signalStreamWatchdogTimeout();
   };
 
-  watchdog = createPiStreamWatchdog({
+  const watchdog: PiStreamWatchdog = createPiStreamWatchdog({
     preStreamTimeoutMs: input.preStreamTimeoutMs,
     idleTimeoutMs: input.idleTimeoutMs,
     onTimeout: handleTimeout,
@@ -84,7 +83,19 @@ export function createRuntimeStreamWatchdogController(
   return {
     pause: () => watchdog.pause(),
     resume: () => watchdog.resume(),
-    reset: () => watchdog.reset(),
+    reset: () => {
+      transportStarted = true;
+      watchdog.reset();
+    },
+    markTransportActivity: () => {
+      transportStarted = true;
+      watchdog.reset();
+    },
+    setPreStreamTimeoutMs: (timeoutMs) => {
+      if (transportStarted) return;
+      preStreamTimeoutMs = Math.max(1, Math.floor(timeoutMs));
+      watchdog.resetPreStream(preStreamTimeoutMs);
+    },
     stop: () => watchdog.stop(),
     pauseIfNeeded: () => {
       if (input.shouldPauseForExternalActivity()) watchdog.pause();

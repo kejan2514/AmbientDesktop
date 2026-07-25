@@ -22,6 +22,21 @@ const MOTION_HINT_PATTERN = /\b(?:animat(?:e|ed|ion)|moving|motion|screensaver|s
 const MOTION_IMPLEMENTATION_PATTERN = /\brequestAnimationFrame\s*\(|\bsetInterval\s*\(|@keyframes\b|\.animate\s*\(|\banimation\s*:/i;
 const GOAL_VALIDATION_BROWSER_DELAY_MS = 1800;
 const GOAL_VALIDATION_PREVIEW_TTL_MS = 60_000;
+const HTML_DISCOVERY_EXCLUDED_DIRECTORIES = new Set([
+  ".git",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".venv",
+  "__pycache__",
+  "build",
+  "coverage",
+  "dist",
+  "htmlcov",
+  "node_modules",
+  "site-packages",
+  "venv",
+]);
 
 export interface GoalCompletionValidationResult {
   ok: boolean;
@@ -52,7 +67,7 @@ interface HtmlArtifactCandidate {
 
 export async function validateGoalCompletionArtifacts(input: GoalCompletionValidationInput): Promise<GoalCompletionValidationResult> {
   const workspacePath = input.thread.workspacePath;
-  const candidates = htmlArtifactCandidates(input.messages, workspacePath);
+  const candidates = htmlArtifactCandidates(input.goal, input.messages, workspacePath);
   const shouldInspectHtml = candidates.length > 0 || goalRequiresVisualHtmlValidation(input.goal, input.messages);
   if (!shouldInspectHtml) return okResult([]);
 
@@ -220,13 +235,23 @@ return {
   return issues;
 }
 
-function htmlArtifactCandidates(messages: ChatMessage[], workspacePath: string): HtmlArtifactCandidate[] {
-  const paths = new Set<string>();
-  for (const message of messages) {
-    for (const path of htmlPathsFromMessage(message)) paths.add(path);
+function htmlArtifactCandidates(goal: ThreadGoal, messages: ChatMessage[], workspacePath: string): HtmlArtifactCandidate[] {
+  const evidencePaths = new Set<string>();
+  for (const message of messagesForGoal(goal, messages)) {
+    for (const path of htmlPathsFromMessage(message)) evidencePaths.add(path);
   }
-  for (const path of newestWorkspaceHtmlArtifacts(workspacePath)) paths.add(path);
+  const evidenceCandidates = resolveHtmlArtifactCandidates(evidencePaths, workspacePath);
+  if (evidenceCandidates.length) return evidenceCandidates.slice(0, 12);
 
+  const goalCreatedAtMs = Date.parse(goal.createdAt);
+  const fallbackPaths = newestWorkspaceHtmlArtifacts(
+    workspacePath,
+    Number.isFinite(goalCreatedAtMs) ? goalCreatedAtMs : undefined,
+  );
+  return resolveHtmlArtifactCandidates(fallbackPaths, workspacePath).slice(0, 12);
+}
+
+function resolveHtmlArtifactCandidates(paths: Iterable<string>, workspacePath: string): HtmlArtifactCandidate[] {
   const candidates: HtmlArtifactCandidate[] = [];
   const seen = new Set<string>();
   for (const path of paths) {
@@ -235,7 +260,28 @@ function htmlArtifactCandidates(messages: ChatMessage[], workspacePath: string):
     seen.add(candidate.absolutePath);
     candidates.push(candidate);
   }
-  return candidates.slice(0, 12);
+  return candidates;
+}
+
+function messagesForGoal(goal: ThreadGoal, messages: ChatMessage[]): ChatMessage[] {
+  const goalCreatedAtMs = Date.parse(goal.createdAt);
+  if (!Number.isFinite(goalCreatedAtMs)) return messages;
+  let initiatingUserMessageIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (!message) continue;
+    if (message.role !== "user") continue;
+    const messageCreatedAtMs = Date.parse(message.createdAt);
+    if (!Number.isFinite(messageCreatedAtMs) || messageCreatedAtMs > goalCreatedAtMs) continue;
+    initiatingUserMessageIndex = index;
+    break;
+  }
+  const goalMessages = initiatingUserMessageIndex >= 0 ? messages.slice(initiatingUserMessageIndex) : messages;
+  return goalMessages.filter((message, index) => {
+    if (initiatingUserMessageIndex >= 0 && index === 0) return true;
+    const messageCreatedAtMs = Date.parse(message.createdAt);
+    return !Number.isFinite(messageCreatedAtMs) || messageCreatedAtMs >= goalCreatedAtMs;
+  });
 }
 
 function htmlPathsFromMessage(message: ChatMessage): string[] {
@@ -281,16 +327,22 @@ function htmlArtifactCandidate(path: string, workspacePath: string): HtmlArtifac
   return { absolutePath, relativePath };
 }
 
-function newestWorkspaceHtmlArtifacts(workspacePath: string): string[] {
+function newestWorkspaceHtmlArtifacts(workspacePath: string, createdAfterMs?: number): string[] {
   const entries: { path: string; mtimeMs: number }[] = [];
-  scanWorkspaceHtmlArtifacts(workspacePath, workspacePath, entries, 0);
+  scanWorkspaceHtmlArtifacts(workspacePath, workspacePath, entries, 0, createdAfterMs);
   return entries
     .sort((a, b) => b.mtimeMs - a.mtimeMs)
     .slice(0, 8)
     .map((entry) => entry.path);
 }
 
-function scanWorkspaceHtmlArtifacts(workspacePath: string, directory: string, entries: { path: string; mtimeMs: number }[], depth: number): void {
+function scanWorkspaceHtmlArtifacts(
+  workspacePath: string,
+  directory: string,
+  entries: { path: string; mtimeMs: number }[],
+  depth: number,
+  createdAfterMs?: number,
+): void {
   if (depth > 8 || entries.length > 64) return;
   let dirents: Dirent[];
   try {
@@ -299,16 +351,18 @@ function scanWorkspaceHtmlArtifacts(workspacePath: string, directory: string, en
     return;
   }
   for (const dirent of dirents) {
-    if (dirent.name === ".git" || dirent.name === "node_modules") continue;
+    if (HTML_DISCOVERY_EXCLUDED_DIRECTORIES.has(dirent.name)) continue;
     const absolutePath = join(directory, dirent.name);
     if (dirent.isDirectory()) {
-      scanWorkspaceHtmlArtifacts(workspacePath, absolutePath, entries, depth + 1);
+      scanWorkspaceHtmlArtifacts(workspacePath, absolutePath, entries, depth + 1, createdAfterMs);
       continue;
     }
     if (!dirent.isFile() || !HTML_ARTIFACT_PATTERN.test(dirent.name)) continue;
     try {
       const file = statSync(absolutePath);
-      if (file.isFile()) entries.push({ path: relative(workspacePath, absolutePath), mtimeMs: file.mtimeMs });
+      if (file.isFile() && (createdAfterMs === undefined || file.mtimeMs >= createdAfterMs)) {
+        entries.push({ path: relative(workspacePath, absolutePath), mtimeMs: file.mtimeMs });
+      }
     } catch {
       continue;
     }

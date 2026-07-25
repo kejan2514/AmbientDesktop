@@ -19,12 +19,13 @@ export class ProjectStoreContextUsageRepository {
     this.db
       .prepare(
         `INSERT INTO context_usage_snapshots
-        (id, thread_id, source, tokens, context_window, percent, latest_compaction_at, compaction_count, updated_at, diagnostics_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, thread_id, model_id, source, tokens, context_window, percent, latest_compaction_at, compaction_count, updated_at, diagnostics_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
         input.threadId,
+        input.modelId ?? null,
         input.source,
         input.tokens ?? null,
         input.contextWindow ?? null,

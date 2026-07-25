@@ -2068,14 +2068,14 @@ function ensureAmbientApiKeyEnv(): void {
   }
   const keyFile = [
     process.env.AMBIENT_API_KEY_FILE,
-    join(repoRoot(), "ignored provider key files"),
-    join(dirname(repoRoot()), "ignored provider key files"),
-    join(dirname(dirname(repoRoot())), "ignored provider key files"),
-    join(homedir(), "ignored provider key files"),
-    "/Users/example/Documents/ambientCoder/ignored provider key files",
+    join(repoRoot(), "ignored-provider-key-file.txt"),
+    join(dirname(repoRoot()), "ignored-provider-key-file.txt"),
+    join(dirname(dirname(repoRoot())), "ignored-provider-key-file.txt"),
+    join(homedir(), "ignored-provider-key-file.txt"),
+    "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
   ].find((filePath): filePath is string => Boolean(filePath && existsSync(filePath)));
   if (!keyFile) {
-    throw new Error("Set AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or place ignored provider key files near the repo.");
+    throw new Error("Set AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or place ignored-provider-key-file.txt near the repo.");
   }
   const key = readFileSync(keyFile, "utf8").trim();
   if (!key) throw new Error(`Ambient API key file is empty: ${keyFile}`);

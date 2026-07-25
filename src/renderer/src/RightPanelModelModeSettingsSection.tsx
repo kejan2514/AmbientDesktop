@@ -1250,7 +1250,7 @@ function ModelRuntimeSettingsRows({
         <SettingsRow
           label="Provider stream idle retry"
           value={formatDurationMs(state.settings.modelRuntime.providerStreamIdleTimeoutMs)}
-          description="Retries when Ambient/Pi emits no stream events, assistant text, or tool argument growth for the selected window."
+          description="Retries only after the selected window passes with no response bytes or keepalives, Pi events, assistant text, or tool argument growth."
         >
           <select
             className="automation-select"

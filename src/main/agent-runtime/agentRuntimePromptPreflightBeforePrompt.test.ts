@@ -96,6 +96,7 @@ describe("runAgentRuntimePromptPreflightBeforePrompt", () => {
       session,
       promptContent: "hello",
       contextWindow: 200_000,
+      requestedOutputTokens: undefined,
       reserveTokens: 16_384,
       hardPreflightPercent: 92,
     });

@@ -35,7 +35,7 @@ describe("sub-agent live confidence blockers and reports", () => {
         exitCode: 1,
         stdout: "",
         stderr:
-          "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored provider key files for sub-agent Pi tool live smoke.",
+          "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored-provider-key-file.txt for sub-agent Pi tool live smoke.",
       },
       liveSmokeArtifact: undefined,
     });

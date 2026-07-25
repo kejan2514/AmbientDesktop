@@ -12,6 +12,7 @@ import type {
   RuntimeSessionRecoveryContext,
 } from "./agentRuntimeAssistantRetryInput";
 import type { AmbientStreamFailureKind } from "./agentRuntimeAmbientFacade";
+import type { AmbientProviderContextOverflow } from "./agentRuntimeAmbientFacade";
 import type { RuntimeProviderErrorDiagnostic } from "./provider-continuation/agentRuntimeProviderDiagnostics";
 import type { ProviderInterruptionToolSnapshot } from "./provider-continuation/agentRuntimeProviderContinuationHelpers";
 import type { ChatStreamInterruptionDiagnostic } from "./agentRuntimeSendStreamDiagnostics";
@@ -96,6 +97,10 @@ export interface RuntimePromptFailureHandlerInput {
     providerContinuationStateId?: string,
   ) => RuntimeSessionRecoveryContext;
   createAssistantFinalizationRetryInput: RuntimePromptFailureRetryInputFactory;
+  recoverProviderContextOverflow?: (overflow: AmbientProviderContextOverflow) => Promise<{
+    effectiveContextWindowTokens: number;
+    requestedOutputTokens: number;
+  }>;
   createInterruptedToolCallRecoveryInput: (snapshots: InterruptedToolCallRecoverySnapshot[]) => SendMessageInput;
   collectOpenProviderInterruptionToolSnapshots: () => ProviderInterruptionToolSnapshot[];
   createProviderContinuationState: (

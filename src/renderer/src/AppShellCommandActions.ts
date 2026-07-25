@@ -4,6 +4,7 @@ import type {
   SetStateAction,
 } from "react";
 
+import { normalizeAmbientModelId } from "../../shared/ambientModels";
 import type {
   DesktopState,
   MenuCommand,
@@ -35,6 +36,19 @@ type MediaPreviewModal = {
   path: string;
   mediaKind: "image" | "video";
 };
+
+function contextUsageForModel(
+  snapshot: DesktopState["contextUsage"] | undefined,
+  modelId: string,
+): DesktopState["contextUsage"] | undefined {
+  if (
+    snapshot?.modelId === undefined ||
+    normalizeAmbientModelId(snapshot.modelId) !== normalizeAmbientModelId(modelId)
+  ) {
+    return undefined;
+  }
+  return snapshot;
+}
 
 export interface AppShellCommandActionsOptions {
   compactActiveThread: () => MaybePromise;
@@ -195,6 +209,9 @@ export function createAppShellCommandActions({
       threadId,
       ...input,
     });
+    const refreshedContextUsage = input.model !== undefined
+      ? await window.ambientDesktop.getContextUsage(thread.id).catch(() => undefined)
+      : undefined;
     setState((current) => {
       if (!current) return current;
       return {
@@ -209,6 +226,9 @@ export function createAppShellCommandActions({
               thinkingLevel: thread.thinkingLevel,
             }
           : current.settings,
+        contextUsage: current.activeThreadId === thread.id && input.model !== undefined
+          ? contextUsageForModel(refreshedContextUsage ?? current.contextUsage, thread.model)
+          : current.contextUsage,
       };
     });
     return thread;

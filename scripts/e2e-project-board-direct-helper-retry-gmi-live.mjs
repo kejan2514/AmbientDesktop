@@ -253,8 +253,8 @@ async function prepareWorkspaceCopy() {
   if (!snapshotWorkspace || !existsSync(snapshotWorkspace)) {
     throw new Error("Configure AMBIENT_PROJECT_BOARD_DIRECT_HELPER_RETRY_SNAPSHOT_WORKSPACE or AMBIENT_DESKTOP_WORKSPACE with a local snapshot workspace directory.");
   }
-  if (!process.env.GMI_CLOUD_API_KEY && !process.env.GMI_API_KEY && !process.env.GMI_CLOUD_API_KEY_FILE && !existsSync(join(repoRoot, "ignored provider key files"))) {
-    throw new Error("Configure GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or the ignored ignored provider key files file before running this live smoke.");
+  if (!process.env.GMI_CLOUD_API_KEY && !process.env.GMI_API_KEY && !process.env.GMI_CLOUD_API_KEY_FILE && !existsSync(join(repoRoot, "ignored-provider-key-file.txt"))) {
+    throw new Error("Configure GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or the ignored ignored-provider-key-file.txt file before running this live smoke.");
   }
 
   await rm(runRoot, { recursive: true, force: true });

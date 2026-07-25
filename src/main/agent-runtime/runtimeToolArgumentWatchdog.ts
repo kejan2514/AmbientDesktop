@@ -37,6 +37,7 @@ export interface RuntimeToolArgumentWatchdogInput {
 export interface RuntimeToolArgumentWatchdog {
   clear: () => void;
   schedule: () => void;
+  refreshOnTransportActivity: () => void;
 }
 
 export function createRuntimeToolArgumentWatchdog(
@@ -93,6 +94,20 @@ export function createRuntimeToolArgumentWatchdog(
     input.signalStreamWatchdogTimeout();
   };
 
+  const checkForStall = () => {
+    idleTimer = undefined;
+    if (!input.isRunStoreActive() || input.isPermissionWaiting() || input.isToolExecutionActive()) {
+      schedule();
+      return;
+    }
+    const stalled = input.progress.stalledActiveArgument(input.idleTimeoutMs);
+    if (!stalled) {
+      schedule();
+      return;
+    }
+    signalTimeout(stalled);
+  };
+
   const schedule = () => {
     clear();
     if (
@@ -105,23 +120,18 @@ export function createRuntimeToolArgumentWatchdog(
     }
     const delayMs = input.progress.nextActiveArgumentStallDelayMs(input.idleTimeoutMs);
     if (delayMs === undefined) return;
-    idleTimer = scheduleTimeout(() => {
-      idleTimer = undefined;
-      if (!input.isRunStoreActive() || input.isPermissionWaiting() || input.isToolExecutionActive()) {
-        schedule();
-        return;
-      }
-      const stalled = input.progress.stalledActiveArgument(input.idleTimeoutMs);
-      if (!stalled) {
-        schedule();
-        return;
-      }
-      signalTimeout(stalled);
-    }, delayMs);
+    idleTimer = scheduleTimeout(checkForStall, delayMs);
+  };
+
+  const refreshOnTransportActivity = () => {
+    if (!idleTimer) return;
+    clear();
+    idleTimer = scheduleTimeout(checkForStall, input.idleTimeoutMs);
   };
 
   return {
     clear,
     schedule,
+    refreshOnTransportActivity,
   };
 }

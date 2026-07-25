@@ -52,6 +52,40 @@ describe("createPiStreamWatchdog", () => {
     }
   });
 
+  it("can extend the pre-stream window before transport activity starts", () => {
+    vi.useFakeTimers();
+    try {
+      const onTimeout = vi.fn();
+      const watchdog = createPiStreamWatchdog({ preStreamTimeoutMs: 1000, idleTimeoutMs: 500, onTimeout });
+
+      vi.advanceTimersByTime(800);
+      watchdog.resetPreStream(2000);
+      vi.advanceTimersByTime(1999);
+      expect(onTimeout).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(onTimeout).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("resumes the active pre-stream window rather than switching to idle", () => {
+    vi.useFakeTimers();
+    try {
+      const onTimeout = vi.fn();
+      const watchdog = createPiStreamWatchdog({ preStreamTimeoutMs: 2000, idleTimeoutMs: 500, onTimeout });
+
+      watchdog.pause();
+      watchdog.resume();
+      vi.advanceTimersByTime(1999);
+      expect(onTimeout).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(onTimeout).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not fire after stop", () => {
     vi.useFakeTimers();
     try {

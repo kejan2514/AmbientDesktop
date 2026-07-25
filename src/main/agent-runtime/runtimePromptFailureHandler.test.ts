@@ -278,6 +278,55 @@ function setup(overrides: Partial<RuntimePromptFailureHandlerInput> = {}) {
 }
 
 describe("handleRuntimePromptFailure", () => {
+  it("learns a stricter provider limit, compacts, and retries an overflow once without discarding the session", async () => {
+    const recoverProviderContextOverflow = vi.fn(async () => ({
+      effectiveContextWindowTokens: 101_376,
+      requestedOutputTokens: 32_000,
+    }));
+    const { input, pending, runtimeMessages, finishedRuns } = setup({
+      error: new Error(
+        '400 {"error":{"message":"This model\'s maximum context length is 101376 tokens. However, you requested 32000 output tokens and your prompt contains at least 69377 input tokens, for a total of at least 101377 tokens. (parameter=input_tokens, value=69377)","code":400}}',
+      ),
+      retrySourceUserMessageId: "user-1",
+      recoverProviderContextOverflow,
+    });
+
+    await handleRuntimePromptFailure(input);
+
+    expect(recoverProviderContextOverflow).toHaveBeenCalledWith(expect.objectContaining({
+      contextWindowTokens: 101_376,
+      requestedOutputTokens: 32_000,
+      inputTokens: 69_377,
+    }));
+    expect(pending().pendingEmptyResponseRetry).toBeDefined();
+    expect(input.cleanupCurrentSession).not.toHaveBeenCalled();
+    expect(runtimeMessages.replaceCurrentAssistant).toHaveBeenCalledWith(
+      expect.stringContaining("learned the provider's effective 101,376-token context limit"),
+      expect.objectContaining({ retryingProviderContextOverflow: true, maxRetries: 1 }),
+    );
+    expect(finishedRuns).toEqual([{ status: "done", errorMessage: undefined }]);
+  });
+
+  it("does not repeat provider context overflow recovery after its single retry", async () => {
+    const recoverProviderContextOverflow = vi.fn(async () => ({
+      effectiveContextWindowTokens: 101_376,
+      requestedOutputTokens: 32_000,
+    }));
+    const { input, pending } = setup({
+      error: new Error(
+        "This model's maximum context length is 101376 tokens. However, you requested 32000 output tokens and your prompt contains at least 69377 input tokens, for a total of at least 101377 tokens.",
+      ),
+      retrySourceUserMessageId: "user-1",
+      recoverProviderContextOverflow,
+      assistantFinalizationRetryAttemptsUsedFor: vi.fn((reason) => reason === "provider_context_overflow" ? 1 : 0),
+    });
+
+    await handleRuntimePromptFailure(input);
+
+    expect(recoverProviderContextOverflow).not.toHaveBeenCalled();
+    expect(pending().pendingEmptyResponseRetry).toBeUndefined();
+  });
+
   it("schedules a fresh-session retry for pre-output stream stalls", async () => {
     const { input, retryFollowUp, runtimeMessages, events, finishedRuns, pending } = setup({
       error: new Error("Ambient/Pi did not start streaming within 60000 ms"),

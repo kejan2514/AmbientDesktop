@@ -276,6 +276,8 @@ function streamWatchdogController(): RuntimeStreamWatchdogController {
     pause: vi.fn(),
     resume: vi.fn(),
     reset: vi.fn(),
+    markTransportActivity: vi.fn(),
+    setPreStreamTimeoutMs: vi.fn(),
     stop: vi.fn(),
     pauseIfNeeded: vi.fn(),
   };
@@ -285,6 +287,7 @@ function toolArgumentWatchdogController(): RuntimeToolArgumentWatchdog {
   return {
     clear: vi.fn(),
     schedule: vi.fn(),
+    refreshOnTransportActivity: vi.fn(),
   };
 }
 

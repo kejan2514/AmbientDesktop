@@ -95,6 +95,96 @@ animate();
     expect(result.ok).toBe(true);
     expect(result.artifactPaths).toEqual([]);
   });
+
+  it("does not let virtual-environment HTML templates block an explicit goal artifact", async () => {
+    const workspacePath = mkdtempSync(join(tmpdir(), "ambient-goal-validation-"));
+    const artifactPath = "implementationGaps.html";
+    writeFileSync(
+      join(workspacePath, artifactPath),
+      "<!doctype html><html><body><p>Priorities 1–7 are closed.</p></body></html>",
+    );
+    const coverageTemplates = join(
+      workspacePath,
+      ".venv",
+      "lib",
+      "python3.12",
+      "site-packages",
+      "coverage",
+      "htmlfiles",
+    );
+    mkdirSync(coverageTemplates, { recursive: true });
+    writeFileSync(
+      join(coverageTemplates, "index.html"),
+      "<!doctype html><html><body><script src=\"./code.js\"></script></body></html>",
+    );
+
+    const result = await validateGoalCompletionArtifacts({
+      goal: goal({ objective: "Update the implementationGaps.html report page." }),
+      thread: thread(workspacePath),
+      messages: [toolMessage(workspacePath, artifactPath)],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      issues: [],
+      artifactPaths: [artifactPath],
+    });
+  });
+
+  it("does not carry artifact candidates forward from work before the current goal", async () => {
+    const workspacePath = mkdtempSync(join(tmpdir(), "ambient-goal-validation-"));
+    writeFileSync(
+      join(workspacePath, "old-report.html"),
+      "<!doctype html><html><body><script src=\"./missing.js\"></script></body></html>",
+    );
+    writeFileSync(
+      join(workspacePath, "current-report.html"),
+      "<!doctype html><html><body><p>Current report.</p></body></html>",
+    );
+    const oldArtifactMessage = {
+      ...toolMessage(workspacePath, "old-report.html"),
+      id: "old-artifact",
+      createdAt: "2026-06-13T00:00:00.000Z",
+    };
+
+    const result = await validateGoalCompletionArtifacts({
+      goal: goal({ objective: "Finish the current report page." }),
+      thread: thread(workspacePath),
+      messages: [oldArtifactMessage, toolMessage(workspacePath, "current-report.html")],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      issues: [],
+      artifactPaths: ["current-report.html"],
+    });
+  });
+
+  it("ignores virtual-environment templates during workspace fallback discovery", async () => {
+    const workspacePath = mkdtempSync(join(tmpdir(), "ambient-goal-validation-"));
+    writeFileSync(
+      join(workspacePath, "report.html"),
+      "<!doctype html><html><body><p>Complete report.</p></body></html>",
+    );
+    const coverageTemplates = join(workspacePath, ".venv", "lib", "site-packages", "coverage", "htmlfiles");
+    mkdirSync(coverageTemplates, { recursive: true });
+    writeFileSync(
+      join(coverageTemplates, "index.html"),
+      "<!doctype html><html><body><script src=\"./code.js\"></script></body></html>",
+    );
+
+    const result = await validateGoalCompletionArtifacts({
+      goal: goal({ objective: "Finish the browser-visible report page." }),
+      thread: thread(workspacePath),
+      messages: [],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      issues: [],
+      artifactPaths: ["report.html"],
+    });
+  });
 });
 
 function goal(input: Partial<ThreadGoal> = {}): ThreadGoal {

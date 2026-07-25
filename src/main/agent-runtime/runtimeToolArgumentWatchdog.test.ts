@@ -192,6 +192,29 @@ describe("createRuntimeToolArgumentWatchdog", () => {
     }
   });
 
+  it("keeps partial tool arguments alive while raw transport activity continues", () => {
+    vi.useFakeTimers();
+    try {
+      const input = baseInput();
+      const watchdog = createRuntimeToolArgumentWatchdog(input);
+
+      watchdog.schedule();
+      vi.advanceTimersByTime(500);
+      watchdog.refreshOnTransportActivity();
+      vi.advanceTimersByTime(29_999);
+      expect(input.abortSessionRun).not.toHaveBeenCalled();
+
+      watchdog.refreshOnTransportActivity();
+      vi.advanceTimersByTime(29_999);
+      expect(input.abortSessionRun).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(input.abortSessionRun).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not schedule after a stream or tool-execution timeout has already won", () => {
     vi.useFakeTimers();
     try {

@@ -20,6 +20,18 @@ import {
   AMBIENT_MODEL_DISCOVERY_REFRESH_INTERVAL_MS,
   discoverAmbientModelRuntimeProfiles,
 } from "./ambient/ambientModelDiscovery";
+import {
+  ambientModelLimitObservationFromDiscoveredProfile,
+  ambientModelLimitObservationFromOverflow,
+  ambientModelLimitObservationKey,
+  applyAmbientModelLimitObservation,
+  applyAmbientModelLimitObservationToRegisteredProfile,
+  mergeAmbientModelLimitObservation,
+  readAmbientModelLimitObservations,
+  writeAmbientModelLimitObservations,
+  type AmbientModelLimitObservation,
+  type AmbientProviderContextOverflow,
+} from "./ambient/ambientModelLimits";
 import { installAppLogCapture } from "./diagnostics/appLogs";
 import { parseAmbientLaunchArgs } from "./desktop-shell/launchArgs";
 import { localTextSubagentStartupFeatureFromEnv } from "./local-runtime/localTextSubagentStartupConfig";
@@ -237,6 +249,8 @@ let plannerSettings: PlannerSettings = { autoFinalize: true };
 let localDeepResearchSettings: LocalDeepResearchSettings = normalizeLocalDeepResearchAppSettings(undefined);
 let searchRoutingSettings: SearchRoutingSettings = {};
 let ambientDiscoveredModelProfiles: AmbientModelRuntimeProfile[] = [];
+let ambientModelLimitObservationsLoaded = false;
+const ambientModelLimitObservations = new Map<string, AmbientModelLimitObservation>();
 let ambientModelDiscoveryTimer: ReturnType<typeof setInterval> | undefined;
 type AmbientModelDiscoveryRefreshReason = "startup" | "interval" | "credentials-updated";
 interface AmbientModelDiscoveryRequestIdentity {
@@ -1251,6 +1265,8 @@ const agentRuntimeFeatureFactory = createAgentRuntimeFeatureFactory<ProjectStore
   modelRuntime: (targetStore) => ({
     catalog: (generatedAt) => currentModelRuntimeCatalog(generatedAt ?? new Date().toISOString(), targetStore),
     resolveModelRuntimeProfile: (modelId) => currentModelRuntimeProfile(modelId, targetStore),
+    learnProviderContextLimit: ({ modelId, overflow }) =>
+      learnAmbientProviderContextLimit(modelId, overflow, targetStore),
   }),
   googleWorkspace: {
     readIntegration: () => readFirstPartyGoogleIntegration(),
@@ -1453,10 +1469,27 @@ function currentModelRuntimeCatalog(generatedAt: string, targetStore: ProjectSto
 }
 
 function currentRuntimeModelProfiles(): AmbientModelRuntimeProfile[] {
-  return [
+  ensureAmbientModelLimitObservationsLoaded();
+  const runtimeProfiles = [
     ...ambientDiscoveredModelProfiles,
     ...(localTextSubagentStartup.feature ? [localTextSubagentStartup.feature.profile] : []),
   ];
+  if (getActiveAmbientProviderId() !== "ambient") return runtimeProfiles;
+  const activeAmbientBaseUrl = getActiveAmbientProviderBaseUrl("ambient") ?? "https://api.ambient.xyz";
+  const observedStaticProfiles = [...ambientModelLimitObservations.values()]
+    .filter((observation) => ambientModelLimitObservationKey(observation) === ambientModelLimitObservationKey({
+      baseUrl: activeAmbientBaseUrl,
+      modelId: observation.modelId,
+    }))
+    .filter((observation) => !runtimeProfiles.some(
+      (profile) => normalizeAmbientModelId(profile.modelId) === normalizeAmbientModelId(observation.modelId),
+    ))
+    .flatMap((observation) => {
+      const registeredProfile = resolveAmbientModelRuntimeProfile(observation.modelId);
+      const observedProfile = applyAmbientModelLimitObservationToRegisteredProfile(registeredProfile, observation);
+      return observedProfile ? [observedProfile] : [];
+    });
+  return [...runtimeProfiles.map(applyCurrentAmbientModelLimitObservation), ...observedStaticProfiles];
 }
 
 function currentModelRuntimeProfile(modelId?: string, targetStore: ProjectStore = store): AmbientModelRuntimeProfile {
@@ -1502,9 +1535,24 @@ async function refreshAmbientModelDiscovery(reason: AmbientModelDiscoveryRefresh
       return;
     }
     const nextProfiles = discovery.profiles;
-    const changed = ambientModelDiscoverySignature(nextProfiles) !== ambientModelDiscoverySignature(ambientDiscoveredModelProfiles);
+    let effectiveLimitChanged = false;
+    for (const profile of nextProfiles) {
+      const observation = ambientModelLimitObservationFromDiscoveredProfile({
+        baseUrl: requestIdentity.baseUrl,
+        profile,
+      });
+      if (observation && recordAmbientModelLimitObservation(observation, { persist: false, refreshSessions: false })) {
+        effectiveLimitChanged = true;
+      }
+    }
+    persistAmbientModelLimitObservations();
+    const changed = effectiveLimitChanged ||
+      ambientModelDiscoverySignature(nextProfiles) !== ambientModelDiscoverySignature(ambientDiscoveredModelProfiles);
     ambientDiscoveredModelProfiles = nextProfiles;
-    if (changed) emitDesktopState();
+    if (changed) {
+      refreshLoadedRuntimeModelProfiles();
+      emitDesktopState();
+    }
     console.log(
       `[models] Refreshed Ambient model catalog from /v1/models for ${reason}: ${discovery.readyModelCount}/${discovery.receivedModelCount} ready, ${nextProfiles.length} runtime profile(s).`,
     );
@@ -1553,6 +1601,86 @@ function ambientModelDiscoverySignature(profiles: readonly AmbientModelRuntimePr
       reasoning: profile.reasoningCapability?.payloadStrategy,
     })),
   );
+}
+
+function applyCurrentAmbientModelLimitObservation(profile: AmbientModelRuntimeProfile): AmbientModelRuntimeProfile {
+  if (getActiveAmbientProviderId() !== "ambient") return profile;
+  const baseUrl = getActiveAmbientProviderBaseUrl("ambient") ?? "https://api.ambient.xyz";
+  const observation = ambientModelLimitObservations.get(ambientModelLimitObservationKey({
+    baseUrl,
+    modelId: profile.modelId,
+  }));
+  return applyAmbientModelLimitObservation(profile, observation);
+}
+
+function learnAmbientProviderContextLimit(
+  modelId: string,
+  overflow: AmbientProviderContextOverflow,
+  targetStore: ProjectStore,
+): AmbientModelRuntimeProfile {
+  ensureAmbientModelLimitObservationsLoaded();
+  if (getActiveAmbientProviderId() !== "ambient") {
+    throw new Error("Provider context-limit learning is only available for the Ambient provider.");
+  }
+  const baseUrl = getActiveAmbientProviderBaseUrl("ambient") ?? "https://api.ambient.xyz";
+  const advertisedProfile = currentModelRuntimeCatalog(new Date().toISOString(), targetStore).profiles.find(
+    (profile) => normalizeAmbientModelId(profile.modelId) === normalizeAmbientModelId(modelId),
+  ) ?? resolveAmbientModelRuntimeProfile(modelId);
+  const observation = ambientModelLimitObservationFromOverflow({
+    baseUrl,
+    modelId,
+    overflow,
+    advertisedContextWindowTokens:
+      advertisedProfile.limitMetadata?.advertisedContextWindowTokens ?? advertisedProfile.contextWindowTokens,
+  });
+  recordAmbientModelLimitObservation(observation, { persist: true, refreshSessions: true });
+  emitDesktopState();
+  return applyAmbientModelLimitObservation(advertisedProfile, observation);
+}
+
+function ensureAmbientModelLimitObservationsLoaded(): void {
+  if (ambientModelLimitObservationsLoaded || !app.isReady()) return;
+  ambientModelLimitObservationsLoaded = true;
+  for (const observation of readAmbientModelLimitObservations(app.getPath("userData"))) {
+    ambientModelLimitObservations.set(ambientModelLimitObservationKey(observation), observation);
+  }
+}
+
+function recordAmbientModelLimitObservation(
+  observation: AmbientModelLimitObservation,
+  options: { persist: boolean; refreshSessions: boolean },
+): boolean {
+  ensureAmbientModelLimitObservationsLoaded();
+  const key = ambientModelLimitObservationKey(observation);
+  const current = ambientModelLimitObservations.get(key);
+  const merged = mergeAmbientModelLimitObservation(current, observation);
+  const changed = ambientModelLimitRuntimeSignature(current) !== ambientModelLimitRuntimeSignature(merged);
+  ambientModelLimitObservations.set(key, merged);
+  if (options.persist) persistAmbientModelLimitObservations();
+  if (options.refreshSessions && changed) refreshLoadedRuntimeModelProfiles();
+  return changed;
+}
+
+function ambientModelLimitRuntimeSignature(observation: AmbientModelLimitObservation | undefined): string {
+  if (!observation) return "";
+  return JSON.stringify({
+    source: observation.source,
+    contextWindowTokens: observation.contextWindowTokens,
+    maxOutputTokens: observation.maxOutputTokens,
+    requestedOutputTokens: observation.requestedOutputTokens,
+    advertisedContextWindowTokens: observation.advertisedContextWindowTokens,
+  });
+}
+
+function persistAmbientModelLimitObservations(): void {
+  if (!app.isReady()) return;
+  writeAmbientModelLimitObservations(app.getPath("userData"), [...ambientModelLimitObservations.values()]);
+}
+
+function refreshLoadedRuntimeModelProfiles(): void {
+  for (const host of projectRuntimeHostList()) {
+    host.runtime.refreshModelRuntimeProfiles();
+  }
 }
 
 function setActiveThreadId(threadId: string): string {

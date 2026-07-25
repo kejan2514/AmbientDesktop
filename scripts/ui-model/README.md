@@ -106,7 +106,7 @@ AMBIENT_LIVE_SEEDED_WORKSPACE=/path/to/snapshot/workspace \
 pnpm run test:ui-model:live-seeded
 ```
 
-During the temporary Ambient provider outage, this wrapper defaults to GMI Cloud and passes the provider environment through to the UI-model app launch. It accepts `GMI_CLOUD_API_KEY`, `GMI_API_KEY`, `GMI_CLOUD_API_KEY_FILE`, or the ignored `ignored provider key files` file, but its JSON summaries only record credential source labels such as `env:GMI_CLOUD_API_KEY_FILE`; they do not write secret values.
+During the temporary Ambient provider outage, this wrapper defaults to GMI Cloud and passes the provider environment through to the UI-model app launch. It accepts `GMI_CLOUD_API_KEY`, `GMI_API_KEY`, `GMI_CLOUD_API_KEY_FILE`, or the ignored `ignored-provider-key-file.txt` file, but its JSON summaries only record credential source labels such as `env:GMI_CLOUD_API_KEY_FILE`; they do not write secret values.
 
 The wrapper copies the source `userData` and workspace into `test-results/ui-model-live-seeded/runs/<timestamp>/`, runs a report-only UI-model collection against that copy, and writes `live-seeded-review.json` plus `test-results/ui-model-live-seeded/latest.json`. By default it samples Project Board and Local Tasks scenarios most likely to expose real generated-content layout issues. Pass `--all-profiles` to run the full deterministic catalog or `--scenario=name` to target a specific state. Any findings are diagnostic triage debt, not a strict release gate; convert recurring live-only problems into sanitized deterministic scenarios before relying on the zero-baseline ratchet.
 

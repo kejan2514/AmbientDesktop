@@ -321,7 +321,7 @@ function workflowUiBroaderDogfoodMatrixArtifact() {
           name: `workflow-agent-thread-ui-dogfood/${scenario}`,
           runId: `${scenario}-run`,
           snapshotMode: "shared-snapshot-temp-copy",
-          snapshotRootLabel: "example-shared-secrets-2026-05-14T02-16-32-0700",
+          snapshotRootLabel: "example-shared-secrets",
           snapshotRootPathDigest: "abc123def456",
           pathsAreMachineLocal: true,
         },
@@ -330,7 +330,7 @@ function workflowUiBroaderDogfoodMatrixArtifact() {
           providerLabel: "GMI Cloud",
           workspaceMode: "shared-snapshot-temp-copy",
           credentialConfigured: true,
-          credentialSources: ["file:ignored provider key files"],
+          credentialSources: ["file:ignored-provider-key-file.txt"],
           googleWorkspace: {
             status: "configured",
             binarySource: "gws-hardening-snapshot",

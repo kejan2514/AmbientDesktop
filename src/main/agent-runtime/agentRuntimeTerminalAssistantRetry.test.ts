@@ -172,6 +172,7 @@ describe("AgentRuntime terminal assistant retry", () => {
       await vi.advanceTimersByTimeAsync(0);
       await vi.advanceTimersByTimeAsync(15_000);
       await sendPromise;
+      await vi.advanceTimersByTimeAsync(2_000);
       for (let attempt = 0; attempt < 8; attempt += 1) {
         await vi.advanceTimersByTimeAsync(1);
         if (store.listMessages(thread.id).some((message) => message.content.includes(retryText))) break;
@@ -198,7 +199,7 @@ describe("AgentRuntime terminal assistant retry", () => {
             retryAttempt: 1,
             maxRetries: 10,
             retryReason: "empty_assistant_response",
-            retryDelayMs: 0,
+            retryDelayMs: 1_000,
             receivedAnyText: true,
             currentAssistantFinalTextChars: 0,
             sessionFile: firstSessionFile,
@@ -301,6 +302,7 @@ describe("AgentRuntime terminal assistant retry", () => {
 
       await vi.advanceTimersByTimeAsync(0);
       await sendPromise;
+      await vi.advanceTimersByTimeAsync(10_000);
       for (let attempt = 0; attempt < 16; attempt += 1) {
         await vi.advanceTimersByTimeAsync(1);
         if (store.listMessages(thread.id).some((message) => message.content.includes("Get a Brave Search API key"))) break;
@@ -318,7 +320,7 @@ describe("AgentRuntime terminal assistant retry", () => {
             retryAttempt: 1,
             maxRetries: 10,
             retryReason: "empty_assistant_response",
-            retryDelayMs: 0,
+            retryDelayMs: 1_000,
             receivedAnyText: false,
             currentAssistantFinalTextChars: 0,
             sessionFile: join(threadSessionDir, "empty.jsonl"),
@@ -342,7 +344,7 @@ describe("AgentRuntime terminal assistant retry", () => {
             retryAttempt: 2,
             maxRetries: 10,
             retryReason: "empty_assistant_response",
-            retryDelayMs: 0,
+            retryDelayMs: 1_000,
             receivedAnyText: false,
             currentAssistantFinalTextChars: 0,
             sessionFile: join(threadSessionDir, "empty-2.jsonl"),
@@ -560,6 +562,7 @@ describe("AgentRuntime terminal assistant retry", () => {
       await vi.advanceTimersByTimeAsync(0);
       await vi.advanceTimersByTimeAsync(30_000);
       await sendPromise;
+      await vi.advanceTimersByTimeAsync(2_000);
       for (let attempt = 0; attempt < 8; attempt += 1) {
         await vi.advanceTimersByTimeAsync(1);
         if (store.listMessages(thread.id).some((message) => message.content.includes(retryText))) break;
@@ -577,7 +580,7 @@ describe("AgentRuntime terminal assistant retry", () => {
             retryAttempt: 1,
             maxRetries: 10,
             retryReason: "pre_output_stream_stall",
-            retryDelayMs: 0,
+            retryDelayMs: 1_000,
             message: "Ambient/Pi stream stalled after 30000ms without stream activity.",
             receivedAnyText: false,
             toolMessageCount: 0,

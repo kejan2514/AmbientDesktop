@@ -119,6 +119,7 @@ describe("createRuntimePermissionWaitSetup", () => {
     } as unknown as RuntimeToolExecutionWatchdog;
     const toolArgumentWatchdog = {
       clear: vi.fn(),
+      refreshOnTransportActivity: vi.fn(),
       schedule: vi.fn(),
     } as RuntimeToolArgumentWatchdog;
     const streamWatchdog = {

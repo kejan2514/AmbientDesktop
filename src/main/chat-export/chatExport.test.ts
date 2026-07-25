@@ -132,7 +132,7 @@ describe("chat export", () => {
     try {
       const workspace = store.openWorkspace(workspacePath);
       const thread = store.createThread("Path redaction");
-      const sensitivePath = join(workspace.path, "ignored provider key files");
+      const sensitivePath = join(workspace.path, "ignored-provider-key-file.txt");
       const ordinaryPath = join(workspace.path, "src", "index.ts");
       store.addMessage({
         threadId: thread.id,
@@ -150,7 +150,7 @@ describe("chat export", () => {
 
       expect(transcript).toContain("sensitive-path-ref:v1:");
       expect(transcript).toContain(ordinaryPath);
-      expect(transcript).not.toContain("ignored provider key files");
+      expect(transcript).not.toContain("ignored-provider-key-file.txt");
       expect(transcript).not.toContain("[REDACTED_CREDENTIAL_PATH]");
       expect(transcript).not.toContain("[REDACTED] and then inspect");
       const manifest = JSON.parse(await zipText(zip, "manifest.json")) as Record<string, any>;

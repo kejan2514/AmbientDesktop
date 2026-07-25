@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import {
   AmbientStreamFailureError,
   isRetryableAmbientProviderError,
+  parseAmbientProviderContextOverflow,
+  type AmbientProviderContextOverflow,
   type AmbientStreamFailureKind,
 } from "../agentRuntimeAmbientFacade";
 import { redactSensitiveText } from "../agentRuntimeSecurityFacade";
@@ -38,6 +40,7 @@ export interface RuntimeProviderErrorDiagnostic {
   bodyPreview?: string;
   detailPreview?: string;
   stackPreview?: string;
+  contextOverflow?: AmbientProviderContextOverflow;
 }
 
 export type RuntimeProviderFailureIdleSource =
@@ -184,6 +187,7 @@ export function runtimeProviderErrorDiagnostic(error: unknown): RuntimeProviderE
         message: truncateDiagnosticText(error.cause.message, 500),
       }
     : undefined;
+  const contextOverflow = parseAmbientProviderContextOverflow(error);
   const bodyPreview =
     firstDiagnosticString(object, ["body", "responseBody"]) ??
     firstDiagnosticString(response, ["body", "responseBody"]);
@@ -211,6 +215,7 @@ export function runtimeProviderErrorDiagnostic(error: unknown): RuntimeProviderE
     ...(traceId ? { traceId } : {}),
     ...(retryAfter !== undefined ? { retryAfter } : {}),
     ...(cause ? { cause } : {}),
+    ...(contextOverflow ? { contextOverflow } : {}),
     ...(headers ? { headers } : {}),
     ...(bodyPreview ? { bodyPreview: truncateDiagnosticText(bodyPreview, 1_000) } : {}),
     ...(detailPreview ? { detailPreview: truncateDiagnosticText(detailPreview, 1_000) } : {}),

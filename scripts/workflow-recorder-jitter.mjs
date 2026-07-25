@@ -174,7 +174,7 @@ function liveGmiSmokeTask() {
     env: {
       AMBIENT_PROVIDER: "gmi-cloud",
       AMBIENT_WORKFLOW_RECORDER_LIVE: "1",
-      GMI_CLOUD_API_KEY_FILE: process.env.GMI_CLOUD_API_KEY_FILE ?? join(repoRoot, "ignored provider key files"),
+      GMI_CLOUD_API_KEY_FILE: process.env.GMI_CLOUD_API_KEY_FILE ?? join(repoRoot, "ignored-provider-key-file.txt"),
     },
     report: {
       scenarioCount: liveRecorderScenarioIds.length,

@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AMBIENT_DEFAULT_MODEL,
+  AMBIENT_GLM_5_2_FP8_MODEL,
   resolveAmbientModelRuntimeProfile,
   type AmbientModelRuntimeProfile,
 } from "../../shared/ambientModels";
@@ -12,6 +13,11 @@ import {
   type AgentRuntimePiSession,
   type AgentRuntimeSessionFactoryControllerOptions,
 } from "./agentRuntimeSessionFactoryController";
+import { GMI_CLOUD_GLM_5_2_FP8_MODEL } from "../ambient/gmiCloudModelRouting";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 function thread(input: Partial<ThreadSummary> = {}): ThreadSummary {
   return {
@@ -47,6 +53,7 @@ function controller(input: {
   currentThread?: ThreadSummary;
   features?: AgentRuntimeSessionFactoryControllerOptions["features"];
   commitThreadPiSessionFile?: AgentRuntimeSessionFactoryControllerOptions["commitThreadPiSessionFile"];
+  recordContextUsageSnapshot?: AgentRuntimeSessionFactoryControllerOptions["recordContextUsageSnapshot"];
 } = {}): AgentRuntimeSessionFactoryController {
   const sessions = input.sessions ?? new AgentRuntimeSessionRegistry<AgentRuntimePiSession>();
   const currentThread = input.currentThread ?? thread();
@@ -64,7 +71,7 @@ function controller(input: {
     tencentMemoryRuntimeSnapshots: new Map(),
     getFeatureFlagSnapshot: vi.fn(() => ({ flags: {} }) as never),
     commitThreadPiSessionFile: input.commitThreadPiSessionFile ?? vi.fn(async () => undefined),
-    recordContextUsageSnapshot: vi.fn(() => ({}) as never),
+    recordContextUsageSnapshot: input.recordContextUsageSnapshot ?? vi.fn(() => ({}) as never),
     recordUnavailableContextUsageSnapshot: vi.fn(() => ({}) as never),
     resolveToolCallPermission: vi.fn(async () => undefined),
     emit: vi.fn(),
@@ -91,13 +98,24 @@ describe("AgentRuntimeSessionFactoryController", () => {
     const existing = session({ modelId: "old-model", sessionFile: "/sessions/thread-1.jsonl" });
     sessions.set({ threadId: "thread-1", session: existing });
     const commitThreadPiSessionFile = vi.fn(async () => undefined);
+    const recordContextUsageSnapshot = vi.fn(() => ({}) as never);
     const currentThread = thread({ piSessionFile: "/sessions/old.jsonl" });
-    const runtimeSessionFactory = controller({ sessions, currentThread, commitThreadPiSessionFile });
+    const runtimeSessionFactory = controller({
+      sessions,
+      currentThread,
+      commitThreadPiSessionFile,
+      recordContextUsageSnapshot,
+    });
 
     await runtimeSessionFactory.switchSessionToThreadModel(currentThread, existing);
 
     expect(existing.setModel).toHaveBeenCalledTimes(1);
     expect(existing.setThinkingLevel).toHaveBeenCalledWith("medium");
+    expect(recordContextUsageSnapshot).toHaveBeenCalledWith(
+      "thread-1",
+      existing,
+      "Context usage refreshed after the model changed.",
+    );
     expect(commitThreadPiSessionFile).toHaveBeenCalledWith({
       threadId: "thread-1",
       sessionFile: "/sessions/thread-1.jsonl",
@@ -139,9 +157,27 @@ describe("AgentRuntimeSessionFactoryController", () => {
       id: "moonshotai/kimi-k2.6",
       name: "Kimi K2.6",
       contextWindow: 262144,
-      maxTokens: 262144,
+      maxTokens: 32000,
       input: ["text", "image"],
     }));
+  });
+
+  it("uses GMI Cloud's GLM request id while preserving the canonical model profile", async () => {
+    vi.stubEnv("AMBIENT_PROVIDER", "gmi-cloud");
+    vi.stubEnv("GMI_CLOUD_MODEL", "");
+    const existing = session({ modelId: "old-model" });
+    const currentThread = thread({ model: AMBIENT_GLM_5_2_FP8_MODEL });
+    const runtimeSessionFactory = controller({ currentThread });
+
+    await runtimeSessionFactory.switchSessionToThreadModel(currentThread, existing);
+
+    expect(existing.setModel).toHaveBeenCalledWith(expect.objectContaining({
+      id: GMI_CLOUD_GLM_5_2_FP8_MODEL,
+      name: "GLM 5.2",
+      contextWindow: 202752,
+      maxTokens: 32000,
+    }));
+    expect(currentThread.model).toBe(AMBIENT_GLM_5_2_FP8_MODEL);
   });
 });
 

@@ -17,6 +17,8 @@ function createInput(overrides: Partial<RuntimePromptCompletionStageInput> = {})
     pause: vi.fn(),
     resume: vi.fn(),
     reset: vi.fn(),
+    markTransportActivity: vi.fn(),
+    setPreStreamTimeoutMs: vi.fn(),
     stop: vi.fn(),
     pauseIfNeeded: vi.fn(),
   };

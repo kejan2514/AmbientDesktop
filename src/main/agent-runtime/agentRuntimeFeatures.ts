@@ -41,6 +41,7 @@ import type {
   AmbientModelRuntimeCatalog,
   AmbientModelRuntimeProfile,
 } from "../../shared/ambientModels";
+import type { AmbientProviderContextOverflow } from "./agentRuntimeAmbientFacade";
 import type {
   AmbientTencentMemoryLlmDelegate,
   TencentMemoryCoreConstructorLoader,
@@ -111,6 +112,10 @@ export interface AgentRuntimeFeatures {
   modelRuntime?: {
     catalog?: (generatedAt?: string) => AmbientModelRuntimeCatalog;
     resolveModelRuntimeProfile?: (modelId?: string) => AmbientModelRuntimeProfile;
+    learnProviderContextLimit?: (input: {
+      modelId: string;
+      overflow: AmbientProviderContextOverflow;
+    }) => AmbientModelRuntimeProfile;
   };
   googleWorkspace?: AgentRuntimeGoogleWorkspaceTools;
   workflowNativeTools?: {

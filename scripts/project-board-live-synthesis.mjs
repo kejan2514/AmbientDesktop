@@ -45,7 +45,7 @@ if (!apiKey) {
   throw new Error(
     [
       "Ambient API key is missing.",
-      "Set AMBIENT_API_KEY/AMBIENT_AGENT_AMBIENT_API_KEY, set AMBIENT_API_KEY_FILE, or place ignored provider key files near the repo.",
+      "Set AMBIENT_API_KEY/AMBIENT_AGENT_AMBIENT_API_KEY, set AMBIENT_API_KEY_FILE, or place ignored-provider-key-file.txt near the repo.",
     ].join(" "),
   );
 }
@@ -606,11 +606,11 @@ async function readAmbientApiKey() {
   if (envKey?.trim()) return envKey.trim();
   const candidates = [
     process.env.AMBIENT_API_KEY_FILE,
-    join(repoRoot, "ignored provider key files"),
-    join(dirname(repoRoot), "ignored provider key files"),
-    join(dirname(dirname(repoRoot)), "ignored provider key files"),
-    join(homedir(), "ignored provider key files"),
-    "/Users/example/Documents/ambientCoder/ignored provider key files",
+    join(repoRoot, "ignored-provider-key-file.txt"),
+    join(dirname(repoRoot), "ignored-provider-key-file.txt"),
+    join(dirname(dirname(repoRoot)), "ignored-provider-key-file.txt"),
+    join(homedir(), "ignored-provider-key-file.txt"),
+    "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
   ].filter(Boolean);
   for (const candidate of candidates) {
     if (!existsSync(candidate)) continue;

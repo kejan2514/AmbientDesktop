@@ -25,9 +25,11 @@ describe("createContextAccountingExtension", () => {
       tokens: 321,
       latencyMs: 9,
     }));
+    const onProviderRequestPrepared = vi.fn();
 
     createContextAccountingExtension({
       threadId: "thread-1",
+      modelId: "ambient-test",
       contextWindow: 1_000,
       getActiveSession: () => ({
         sessionFile: "/tmp/session.json",
@@ -47,15 +49,18 @@ describe("createContextAccountingExtension", () => {
       emitContextUsageUpdated: (snapshot) => {
         emitted.push(snapshot);
       },
+      onProviderRequestPrepared,
       fileExists: () => true,
     })(pi.instance as any);
 
     await pi.beforeProviderRequest()({ payload });
 
     expect(countSerializedPayload).toHaveBeenCalledWith(payload, accounting.estimatedTokens);
+    expect(onProviderRequestPrepared).toHaveBeenCalledWith({ inputTokens: 321 });
     expect(recordedSnapshots).toEqual([
       {
         threadId: "thread-1",
+        modelId: "ambient-test",
         source: "estimate",
         tokens: 321,
         contextWindow: 1_000,
@@ -88,7 +93,9 @@ describe("createContextAccountingExtension", () => {
 
     createContextAccountingExtension({
       threadId: "thread-1",
-      contextWindow: 2_000,
+      modelId: "old-model",
+      contextWindow: 1_000,
+      getRunningModel: () => ({ id: "ambient-test", contextWindow: 2_000 }),
       getActiveSession: () => undefined,
       compactionStatsFromEntries: vi.fn(() => ({ compactionCount: 99 })),
       countSerializedPayload: vi.fn(async () => ({
@@ -110,6 +117,7 @@ describe("createContextAccountingExtension", () => {
     expect(snapshots).toEqual([
       expect.objectContaining({
         threadId: "thread-1",
+        modelId: "ambient-test",
         source: "estimate",
         tokens: 80,
         contextWindow: 2_000,

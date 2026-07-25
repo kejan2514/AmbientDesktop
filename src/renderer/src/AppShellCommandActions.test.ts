@@ -177,6 +177,44 @@ describe("AppShellCommandActions", () => {
     expect(controller.state.value?.settings.thinkingLevel).toBe("high");
   });
 
+  it("replaces context usage from the previous model when the active model changes", async () => {
+    const initialState = desktopState();
+    initialState.contextUsage = {
+      threadId: "thread-1",
+      modelId: "old-model",
+      source: "estimate",
+      tokens: 100_000,
+      contextWindow: 80_000,
+      percent: 125,
+      compactionCount: 0,
+      updatedAt: "2026-07-22T00:00:00.000Z",
+    };
+    const updatedThread = { ...threadSummary("thread-1"), model: "new-model" } as ThreadSummary;
+    const refreshedContextUsage: DesktopState["contextUsage"] = {
+      threadId: "thread-1",
+      modelId: "new-model",
+      source: "unavailable",
+      contextWindow: 200_000,
+      compactionCount: 0,
+      updatedAt: "2026-07-22T00:00:01.000Z",
+      diagnostics: { activeSession: false, message: "Waiting for the new model." },
+    };
+    const getContextUsage = vi.fn(async () => refreshedContextUsage);
+    vi.stubGlobal("window", {
+      ambientDesktop: {
+        updateThreadSettings: vi.fn(async () => updatedThread),
+        getContextUsage,
+      },
+    });
+    const controller = createController({ state: initialState });
+
+    await controller.actions.updateThreadSettings({ model: "new-model" });
+
+    expect(controller.state.value?.settings.model).toBe("new-model");
+    expect(getContextUsage).toHaveBeenCalledWith("thread-1");
+    expect(controller.state.value?.contextUsage).toBe(refreshedContextUsage);
+  });
+
   it("updates theme preference through the desktop bridge and document appearance", async () => {
     const appearance: AppAppearance = { themePreference: "dark", resolvedTheme: "dark" };
     const setThemePreference = vi.fn(async () => appearance);

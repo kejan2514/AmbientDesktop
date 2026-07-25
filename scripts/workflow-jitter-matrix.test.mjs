@@ -35,7 +35,7 @@ describe("workflow jitter matrix", () => {
       classifyWorkflowJitterMatrixAttempt({
         exitCode: 1,
         stdout: "",
-        stderr: "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored provider key files for live Workflow Agent dogfood.",
+        stderr: "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored-provider-key-file.txt for live Workflow Agent dogfood.",
       }),
     ).toMatchObject({
       status: "environment_skipped",
@@ -103,9 +103,9 @@ describe("workflow jitter matrix", () => {
         env: {},
         repoRoot: "/tmp/ambient-plan-slice",
         homeDir: "/Users/tester",
-        existsSync: (candidate) => candidate === "/Users/tester/Documents/ambientCoder/ignored provider key files",
+        existsSync: (candidate) => candidate === "/Users/tester/Documents/ambientCoder/ignored-provider-key-file.txt",
       }),
-    ).toBe("/Users/tester/Documents/ambientCoder/ignored provider key files");
+    ).toBe("/Users/tester/Documents/ambientCoder/ignored-provider-key-file.txt");
 
     expect(
       resolveGmiCloudKeyFileForChildEnv({
@@ -114,7 +114,7 @@ describe("workflow jitter matrix", () => {
         homeDir: "/Users/tester",
         existsSync: () => false,
       }),
-    ).toBe("/tmp/ambient-plan-slice/ignored provider key files");
+    ).toBe("/tmp/ambient-plan-slice/ignored-provider-key-file.txt");
   });
 
   it("retries provider-degraded rows and keeps product failures terminal", async () => {

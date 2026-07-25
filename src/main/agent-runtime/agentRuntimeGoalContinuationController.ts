@@ -5,7 +5,6 @@ import {
   goalContinuationPrompt,
   goalRuntimeActivity,
   GOAL_COMPLETION_MESSAGE_KIND,
-  GOAL_MAX_CONTINUATION_TURNS,
   GOAL_NO_PROGRESS_TURN_LIMIT,
   GOAL_PROVIDER_INFRA_FAILURE_LIMIT,
 } from "./agentRuntimeGoalRuntime";
@@ -212,14 +211,6 @@ export class AgentRuntimeGoalContinuationController {
           goalId: stopped.goalId,
         }),
       });
-      return;
-    }
-    if (goal.continuationTurns >= GOAL_MAX_CONTINUATION_TURNS) {
-      const stopped = this.options.store.markThreadGoalStatus(threadId, "usage_limited", {
-        expectedGoalId,
-        statusReason: `Paused after ${GOAL_MAX_CONTINUATION_TURNS} automatic continuation turns.`,
-      });
-      this.options.emit({ type: "thread-goal-updated", goal: stopped });
       return;
     }
     if (goal.noProgressTurns >= GOAL_NO_PROGRESS_TURN_LIMIT) {

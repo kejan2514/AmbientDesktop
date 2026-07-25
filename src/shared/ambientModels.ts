@@ -64,6 +64,14 @@ export interface AmbientProviderDescriptor {
   notes: string[];
 }
 
+export interface AmbientModelRuntimeLimitMetadata {
+  source: "static" | "discovered" | "provider-error";
+  requestedOutputTokens: number;
+  observedAt?: string;
+  expiresAt?: string;
+  advertisedContextWindowTokens?: number;
+}
+
 export interface AmbientModelRuntimeProfile {
   schemaVersion: "ambient-model-runtime-profile-v1";
   profileId: string;
@@ -76,6 +84,7 @@ export interface AmbientModelRuntimeProfile {
   unavailableReason?: string;
   contextWindowTokens?: number;
   maxOutputTokens?: number;
+  limitMetadata?: AmbientModelRuntimeLimitMetadata;
   supportsStreaming: boolean;
   toolUse: AmbientModelToolUseSupport;
   structuredOutput: AmbientModelStructuredOutputSupport;
@@ -239,6 +248,11 @@ export const AMBIENT_MODEL_RUNTIME_PROFILES: AmbientModelRuntimeProfile[] = [
     available: true,
     contextWindowTokens: 262_144,
     maxOutputTokens: 262_144,
+    limitMetadata: {
+      source: "static",
+      requestedOutputTokens: 32_000,
+      advertisedContextWindowTokens: 262_144,
+    },
     supportsStreaming: true,
     toolUse: "ambient-tools",
     structuredOutput: "schema",
@@ -268,6 +282,11 @@ export const AMBIENT_MODEL_RUNTIME_PROFILES: AmbientModelRuntimeProfile[] = [
     available: true,
     contextWindowTokens: 202_752,
     maxOutputTokens: 202_752,
+    limitMetadata: {
+      source: "static",
+      requestedOutputTokens: 32_000,
+      advertisedContextWindowTokens: 202_752,
+    },
     supportsStreaming: true,
     toolUse: "ambient-tools",
     structuredOutput: "schema",
@@ -475,6 +494,7 @@ function cloneAmbientProviderDescriptor(provider: AmbientProviderDescriptor): Am
 function cloneAmbientModelRuntimeProfile(profile: AmbientModelRuntimeProfile): AmbientModelRuntimeProfile {
   return {
     ...profile,
+    ...(profile.limitMetadata ? { limitMetadata: { ...profile.limitMetadata } } : {}),
     reasoningCapability: cloneAmbientModelReasoningCapability(reasoningCapabilityForProfile(profile)),
     providerQuirks: [...profile.providerQuirks],
   };

@@ -173,7 +173,7 @@ describe("Workflow Agent V3 UI dogfood harness", () => {
   it("defaults live UI dogfood launches to GMI Cloud without reading or embedding secret values", async () => {
     const tempRoot = await mkdtemp(join(tmpdir(), "workflow-ui-contract-"));
     try {
-      await writeFile(join(tempRoot, "ignored provider key files"), "secret-value-that-must-not-appear\n", "utf8");
+      await writeFile(join(tempRoot, "ignored-provider-key-file.txt"), "secret-value-that-must-not-appear\n", "utf8");
       const launch = workflowUiDogfoodLaunchEnvironment({
         env: {},
         cwd: tempRoot,
@@ -196,7 +196,7 @@ describe("Workflow Agent V3 UI dogfood harness", () => {
         AMBIENT_PROVIDER: "gmi-cloud",
         AMBIENT_DESKTOP_WORKSPACE: "/tmp/workflow-ui-workspace",
         AMBIENT_E2E_USER_DATA: "/tmp/workflow-ui-user-data",
-        GMI_CLOUD_API_KEY_FILE: join(tempRoot, "ignored provider key files"),
+        GMI_CLOUD_API_KEY_FILE: join(tempRoot, "ignored-provider-key-file.txt"),
       });
       expect(JSON.stringify(launch.launchSummary)).not.toContain("secret-value-that-must-not-appear");
       expect(JSON.stringify(launch.env)).not.toContain("secret-value-that-must-not-appear");

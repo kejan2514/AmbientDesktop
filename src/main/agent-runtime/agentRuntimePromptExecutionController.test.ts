@@ -16,6 +16,10 @@ import { createRuntimeProviderRetryState } from "./runtimeProviderRetryState";
 import type { RuntimeStreamWatchdogController } from "./runtimeStreamWatchdogController";
 import { createRuntimeTextOutputState } from "./runtimeTextOutputState";
 import type { RuntimeToolEventDispatcherSetupInput } from "./runtimeToolEventDispatcherSetup";
+import {
+  bindAmbientProviderTransportChannel,
+  type AmbientProviderTransportActivity,
+} from "../ambient/ambientProviderTransportActivity";
 
 const createdAt = "2026-06-19T00:00:00.000Z";
 
@@ -64,6 +68,7 @@ function promptControllers(): RuntimePromptControllerSetup {
     toolArgumentWatchdog: {
       schedule: vi.fn(),
       clear: vi.fn(),
+      refreshOnTransportActivity: vi.fn(),
     },
     emptyAssistantStallWatchdog: {
       schedule: vi.fn(),
@@ -117,6 +122,17 @@ function promptControllers(): RuntimePromptControllerSetup {
 describe("AgentRuntimePromptExecutionController", () => {
   it("routes prompt execution through focused runtime owners", async () => {
     const testSession = session();
+    const transportListeners = new Set<(activity: AmbientProviderTransportActivity) => void>();
+    const publishTransportActivity = (activity: AmbientProviderTransportActivity) => {
+      for (const listener of transportListeners) listener(activity);
+    };
+    bindAmbientProviderTransportChannel(testSession, {
+      publish: publishTransportActivity,
+      subscribe: (listener) => {
+        transportListeners.add(listener);
+        return () => transportListeners.delete(listener);
+      },
+    });
     const controllers = promptControllers();
     const streamInputs: RuntimePromptStreamDispatcherSetupInput[] = [];
     const toolInputs: RuntimeToolEventDispatcherSetupInput[] = [];
@@ -153,6 +169,8 @@ describe("AgentRuntimePromptExecutionController", () => {
       }),
       runPromptCompletionSetup: vi.fn(async (input) => {
         completionInputs.push(input);
+        publishTransportActivity({ kind: "request_prepared", inputTokens: 69_377 });
+        publishTransportActivity({ kind: "body", bytes: 12 });
         return { finalizedAfterToolIdle: true };
       }),
     };
@@ -232,7 +250,9 @@ describe("AgentRuntimePromptExecutionController", () => {
       streamTraceState: {
         markFirstToolArgumentObserved: vi.fn(),
         markFirstToolExecutionObserved: vi.fn(),
-      } as unknown as Parameters<AgentRuntimePromptExecutionController<TestSession>["runPrompt"]>[0]["streamTraceState"],
+      } as unknown as Parameters<
+        AgentRuntimePromptExecutionController<TestSession>["runPrompt"]
+      >[0]["streamTraceState"],
       providerRetryState: createRuntimeProviderRetryState(),
       toolMessages: toolMessages as unknown as Parameters<
         AgentRuntimePromptExecutionController<TestSession>["runPrompt"]
@@ -255,11 +275,13 @@ describe("AgentRuntimePromptExecutionController", () => {
 
     expect(result.completed).toBe(true);
     expect(result.promptRunState).toBe(controllers.promptRunState);
-    expect(options.preflightBeforePrompt).toHaveBeenCalledWith(expect.objectContaining({
-      thread: expect.objectContaining({ id: "thread-1" }),
-      session: testSession,
-      promptContent: "hello Pi",
-    }));
+    expect(options.preflightBeforePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        thread: expect.objectContaining({ id: "thread-1" }),
+        session: testSession,
+        promptContent: "hello Pi",
+      }),
+    );
     expect(setToolExecutionWatchdog).toHaveBeenCalledWith(controllers.toolExecutionWatchdog);
     expect(setToolArgumentWatchdog).toHaveBeenCalledWith(controllers.toolArgumentWatchdog);
     expect(setEmptyAssistantStallWatchdog).toHaveBeenCalledWith(controllers.emptyAssistantStallWatchdog);
@@ -275,6 +297,8 @@ describe("AgentRuntimePromptExecutionController", () => {
 
     const streamWatchdog = {
       reset: vi.fn(),
+      markTransportActivity: vi.fn(),
+      setPreStreamTimeoutMs: vi.fn(),
       pause: vi.fn(),
       pauseIfNeeded: vi.fn(),
       resume: vi.fn(),
@@ -282,7 +306,14 @@ describe("AgentRuntimePromptExecutionController", () => {
       clear: vi.fn(),
     } as RuntimeStreamWatchdogController;
     completionInputs[0]!.setStreamWatchdog(streamWatchdog);
+    expect(streamWatchdog.setPreStreamTimeoutMs).toHaveBeenCalledWith(80_000);
+    expect(streamWatchdog.markTransportActivity).toHaveBeenCalledTimes(1);
+    expect(controllers.emptyAssistantStallWatchdog.refreshOnStreamActivity).toHaveBeenCalledTimes(1);
+    expect(controllers.toolArgumentWatchdog.refreshOnTransportActivity).toHaveBeenCalledTimes(1);
     expect(setStreamWatchdog).toHaveBeenCalledWith(streamWatchdog);
+    completionInputs[0]!.unsubscribePromptEvents();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(transportListeners.size).toBe(0);
     await completionInputs[0]!.finalizeAssistantTerminalRun();
     expect(promptExecution.finalizeAssistantTerminalRun).toHaveBeenCalledTimes(1);
     promptExecutionInputs[0]!.removeActiveSessionIfCurrent(testSession);

@@ -24,6 +24,7 @@ export type ContextUsageAmbientCliSkillMountDiagnostic = NonNullable<ContextUsag
 export interface ActiveContextUsageSnapshotSession extends ContextUsageReader {
   sessionFile?: string;
   model?: {
+    id?: string;
     contextWindow?: number;
   };
   sessionManager: {
@@ -34,6 +35,7 @@ export interface ActiveContextUsageSnapshotSession extends ContextUsageReader {
 export interface ContextUsageModelWindowReader extends ContextUsageReader {
   model?: {
     contextWindow?: number;
+    maxTokens?: number;
   };
 }
 
@@ -60,6 +62,7 @@ export type ContextUsageRestorableSessionFileResolver = (
 
 export interface BuildUnavailableContextUsageSnapshotInput {
   threadId: string;
+  modelId: string;
   sessionFile?: string;
   sessionDir: string;
   workspacePath: string;
@@ -126,6 +129,7 @@ export function buildActiveContextUsageSnapshot(input: BuildActiveContextUsageSn
   const now = input.now ?? (() => new Date());
   return {
     threadId: input.threadId,
+    modelId: input.session.model?.id,
     source: contextUsageSource(usage),
     tokens: usage?.tokens ?? undefined,
     contextWindow: usage?.contextWindow ?? input.session.model?.contextWindow ?? input.unavailableContextWindow,
@@ -157,6 +161,7 @@ export function buildUnavailableContextUsageSnapshot(input: BuildUnavailableCont
   );
   return {
     threadId: input.threadId,
+    modelId: input.modelId,
     source: "unavailable",
     contextWindow: input.contextWindow,
     compactionCount: compaction.compactionCount,

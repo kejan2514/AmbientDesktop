@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { AMBIENT_DEFAULT_MODEL } from "../../shared/ambientModels";
 import { AGGRESSIVE_RETRY_BACKOFF_MS, aggressiveAmbientRetryPolicy, type AmbientRetryPolicy } from "./aggressiveRetries";
+import { gmiCloudRequestModelId } from "./gmiCloudModelRouting";
 
 export type LiveAmbientCompatibleProviderId = "ambient" | "gmi-cloud";
 
@@ -12,9 +13,9 @@ const DEFAULT_AMBIENT_DIRECT_HELPER_STREAM_IDLE_TIMEOUT_MS = 120_000;
 const DEFAULT_AMBIENT_DIRECT_HELPER_STREAM_CONTENT_IDLE_TIMEOUT_MS = 120_000;
 const DEFAULT_AMBIENT_DIRECT_HELPER_MAX_RETRIES = AGGRESSIVE_RETRY_BACKOFF_MS.length;
 const DEFAULT_AMBIENT_DIRECT_HELPER_TEST_TIMEOUT_MS = 180_000;
-const DEFAULT_GMI_DIRECT_HELPER_PRE_STREAM_TIMEOUT_MS = 30_000;
-const DEFAULT_GMI_DIRECT_HELPER_STREAM_IDLE_TIMEOUT_MS = 30_000;
-const DEFAULT_GMI_DIRECT_HELPER_STREAM_CONTENT_IDLE_TIMEOUT_MS = 30_000;
+const DEFAULT_GMI_DIRECT_HELPER_PRE_STREAM_TIMEOUT_MS = 60_000;
+const DEFAULT_GMI_DIRECT_HELPER_STREAM_IDLE_TIMEOUT_MS = 120_000;
+const DEFAULT_GMI_DIRECT_HELPER_STREAM_CONTENT_IDLE_TIMEOUT_MS = 120_000;
 const DEFAULT_GMI_DIRECT_HELPER_MAX_RETRIES = 3;
 const DEFAULT_GMI_DIRECT_HELPER_TEST_TIMEOUT_MS = 180_000;
 
@@ -46,12 +47,18 @@ export function liveAmbientProviderModel(input: {
   fallbackModel?: string;
 } = {}): string {
   const env = input.env ?? process.env;
-  if (liveAmbientProviderId(env) === "gmi-cloud" && env.GMI_CLOUD_MODEL?.trim()) return env.GMI_CLOUD_MODEL.trim();
+  let requestedModel: string | undefined;
   for (const name of input.preferredModelEnvNames ?? ["AMBIENT_WORKFLOW_MODEL", "AMBIENT_LIVE_MODEL"]) {
     const value = env[name]?.trim();
-    if (value) return value;
+    if (value) {
+      requestedModel = value;
+      break;
+    }
   }
-  return input.fallbackModel ?? AMBIENT_DEFAULT_MODEL;
+  requestedModel ??= input.fallbackModel ?? AMBIENT_DEFAULT_MODEL;
+  return liveAmbientProviderId(env) === "gmi-cloud"
+    ? gmiCloudRequestModelId(requestedModel, env.GMI_CLOUD_MODEL)
+    : requestedModel;
 }
 
 export function liveAmbientDirectHelperProfile(env: NodeJS.ProcessEnv = process.env): LiveAmbientDirectHelperProfile {
@@ -106,8 +113,8 @@ export function readLiveAmbientProviderApiKey(input: {
   const purpose = input.purpose ? ` for ${input.purpose}` : "";
   throw new Error(
     providerId === "gmi-cloud"
-      ? `Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored provider key files${purpose}.`
-      : `Set AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or provide ignored provider key files${purpose}.`,
+      ? `Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored-provider-key-file.txt${purpose}.`
+      : `Set AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or provide ignored-provider-key-file.txt${purpose}.`,
   );
 }
 
@@ -130,17 +137,17 @@ function readAmbientApiKey(env: NodeJS.ProcessEnv, cwd: string): string | undefi
     readKeyFile(env.AMBIENT_API_KEY_FILE) ||
     readKeyFileCandidates([
       join(cwd, "ambient_api_key_u.txt"),
-      join(cwd, "ignored provider key files"),
+      join(cwd, "ignored-provider-key-file.txt"),
       join(dirname(cwd), "ambient_api_key_u.txt"),
-      join(dirname(cwd), "ignored provider key files"),
+      join(dirname(cwd), "ignored-provider-key-file.txt"),
       join(dirname(cwd), "ambientCoder", "ambient_api_key_u.txt"),
-      join(dirname(cwd), "ambientCoder", "ignored provider key files"),
+      join(dirname(cwd), "ambientCoder", "ignored-provider-key-file.txt"),
       join(dirname(dirname(cwd)), "ambient_api_key_u.txt"),
-      join(dirname(dirname(cwd)), "ignored provider key files"),
+      join(dirname(dirname(cwd)), "ignored-provider-key-file.txt"),
       join(homedir(), "Documents", "ambientCoder", "ambient_api_key_u.txt"),
-      join(homedir(), "Documents", "ambientCoder", "ignored provider key files"),
+      join(homedir(), "Documents", "ambientCoder", "ignored-provider-key-file.txt"),
       join(homedir(), "Documents", "New project 3", "ambient_api_key_u.txt"),
-      join(homedir(), "Documents", "New project 3", "ignored provider key files"),
+      join(homedir(), "Documents", "New project 3", "ignored-provider-key-file.txt"),
     ])
   );
 }
@@ -151,11 +158,11 @@ function readGmiCloudApiKey(env: NodeJS.ProcessEnv, cwd: string): string | undef
     env.GMI_API_KEY?.trim() ||
     readKeyFile(env.GMI_CLOUD_API_KEY_FILE) ||
     readKeyFileCandidates([
-      join(cwd, "ignored provider key files"),
-      join(dirname(cwd), "ignored provider key files"),
-      join(dirname(cwd), "ambientCoder", "ignored provider key files"),
-      join(homedir(), "Documents", "ambientCoder", "ignored provider key files"),
-      join(homedir(), "Documents", "New project 3", "ignored provider key files"),
+      join(cwd, "ignored-provider-key-file.txt"),
+      join(dirname(cwd), "ignored-provider-key-file.txt"),
+      join(dirname(cwd), "ambientCoder", "ignored-provider-key-file.txt"),
+      join(homedir(), "Documents", "ambientCoder", "ignored-provider-key-file.txt"),
+      join(homedir(), "Documents", "New project 3", "ignored-provider-key-file.txt"),
     ])
   );
 }

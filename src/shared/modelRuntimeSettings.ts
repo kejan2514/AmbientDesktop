@@ -17,7 +17,7 @@ import {
 } from "./modelProviderInstallTemplates";
 
 export const DEFAULT_MODEL_RUNTIME_PROVIDER_PRE_STREAM_TIMEOUT_MS = 45_000;
-export const DEFAULT_MODEL_RUNTIME_PROVIDER_STREAM_IDLE_TIMEOUT_MS = 30_000;
+export const DEFAULT_MODEL_RUNTIME_PROVIDER_STREAM_IDLE_TIMEOUT_MS = 120_000;
 export const MIN_MODEL_RUNTIME_PROVIDER_TIMEOUT_MS = 5_000;
 export const MAX_MODEL_RUNTIME_PROVIDER_TIMEOUT_MS = 600_000;
 export const MODEL_RUNTIME_INSTALLED_PROVIDER_SCHEMA_VERSION = "ambient-model-runtime-installed-provider-v1" as const;
@@ -204,6 +204,9 @@ function normalizeModelRuntimeProfile(value: unknown): AmbientModelRuntimeProfil
     ...(optionalString(value.unavailableReason) ? { unavailableReason: redactSecretLikeText(optionalString(value.unavailableReason) ?? "") } : {}),
     ...(positiveInteger(value.contextWindowTokens) ? { contextWindowTokens: positiveInteger(value.contextWindowTokens) } : {}),
     ...(positiveInteger(value.maxOutputTokens) ? { maxOutputTokens: positiveInteger(value.maxOutputTokens) } : {}),
+    ...(normalizeModelRuntimeLimitMetadata(value.limitMetadata)
+      ? { limitMetadata: normalizeModelRuntimeLimitMetadata(value.limitMetadata) }
+      : {}),
     supportsStreaming: value.supportsStreaming === true,
     toolUse,
     structuredOutput,
@@ -325,7 +328,26 @@ function cloneProviderDescriptor(provider: AmbientProviderDescriptor): AmbientPr
 function cloneModelRuntimeProfile(profile: AmbientModelRuntimeProfile): AmbientModelRuntimeProfile {
   return {
     ...profile,
+    ...(profile.limitMetadata ? { limitMetadata: { ...profile.limitMetadata } } : {}),
     providerQuirks: [...profile.providerQuirks],
+  };
+}
+
+function normalizeModelRuntimeLimitMetadata(value: unknown): AmbientModelRuntimeProfile["limitMetadata"] | undefined {
+  if (!isRecord(value)) return undefined;
+  const source = value.source === "static" || value.source === "discovered" || value.source === "provider-error"
+    ? value.source
+    : undefined;
+  const requestedOutputTokens = positiveInteger(value.requestedOutputTokens);
+  if (!source || !requestedOutputTokens) return undefined;
+  return {
+    source,
+    requestedOutputTokens,
+    ...(optionalString(value.observedAt) ? { observedAt: optionalString(value.observedAt) } : {}),
+    ...(optionalString(value.expiresAt) ? { expiresAt: optionalString(value.expiresAt) } : {}),
+    ...(positiveInteger(value.advertisedContextWindowTokens)
+      ? { advertisedContextWindowTokens: positiveInteger(value.advertisedContextWindowTokens) }
+      : {}),
   };
 }
 

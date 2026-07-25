@@ -17,7 +17,7 @@ import { Type } from "@mariozechner/pi-ai";
 
 const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), "..");
 const defaultSessionLog =
-  "/Users/example/.ambient-hardening/bases/example-core-no-secrets-2026-05-13/workspace/.ambient-codex/sessions/fb1c7ffc-732d-421c-a429-c66c4628bf60/2026-05-14T23-55-00-533Z_019e28ea-3e35-71f1-a6f9-5233bcce0cac.jsonl";
+  "/Users/example/.ambient-hardening/bases/example-core-no-secrets/workspace/.ambient-codex/sessions/fb1c7ffc-732d-421c-a429-c66c4628bf60/2026-05-14T23-55-00-533Z_019e28ea-3e35-71f1-a6f9-5233bcce0cac.jsonl";
 const continuationPrefix = "Ambient completed the most recent tool call, but no assistant-visible response followed.";
 
 function parseArgs(argv) {
@@ -102,11 +102,11 @@ async function readApiKey() {
   }
   const candidates = [
     process.env.AMBIENT_API_KEY_FILE,
-    join(repoRoot, "ignored provider key files"),
-    join(dirname(repoRoot), "ignored provider key files"),
-    "/Users/example/Documents/ambientCoder/ignored provider key files",
-    "/Users/example/Documents/New project 3/ignored provider key files",
-    join(homedir(), "ignored provider key files"),
+    join(repoRoot, "ignored-provider-key-file.txt"),
+    join(dirname(repoRoot), "ignored-provider-key-file.txt"),
+    "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
+    "/Users/example/Documents/New project 3/ignored-provider-key-file.txt",
+    join(homedir(), "ignored-provider-key-file.txt"),
   ].filter(Boolean);
   for (const candidate of candidates) {
     const path = resolve(String(candidate));
@@ -114,7 +114,7 @@ async function readApiKey() {
     const value = (await readFile(path, "utf8")).trim();
     if (value) return value;
   }
-  throw new Error("Ambient API key missing. Set AMBIENT_API_KEY or provide ignored provider key files.");
+  throw new Error("Ambient API key missing. Set AMBIENT_API_KEY or provide ignored-provider-key-file.txt.");
 }
 
 function normalizeBaseUrl(value) {

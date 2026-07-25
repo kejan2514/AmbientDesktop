@@ -134,6 +134,7 @@ export type ContextUsageSource =
 
 export interface ContextUsageSnapshot {
   threadId: string;
+  modelId?: string;
   source: ContextUsageSource;
   tokens?: number;
   contextWindow?: number;

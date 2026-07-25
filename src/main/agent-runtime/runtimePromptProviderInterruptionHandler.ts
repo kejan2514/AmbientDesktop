@@ -7,7 +7,10 @@ import type { RuntimePromptFailureHandlerInput } from "./runtimePromptFailureTyp
 import type { RuntimeProviderErrorDiagnostic } from "./provider-continuation/agentRuntimeProviderDiagnostics";
 import { isContinuableAmbientProviderInterruption } from "./provider-continuation/agentRuntimeProviderDiagnostics";
 import { runtimeProviderRetryStartingActivity } from "./provider-continuation/agentRuntimeProviderRetryActivity";
-import { providerInterruptionContinuationRetryBudget } from "./provider-continuation/providerInterruptionContinuation";
+import {
+  providerInterruptionContinuationRetryBudget,
+  providerInterruptionContinuationRetryDelayMs,
+} from "./provider-continuation/providerInterruptionContinuation";
 import {
   providerInterruptionFinalizationMessage,
   providerInterruptionRecoveryFailureFinalizationMessage,
@@ -53,6 +56,10 @@ export async function handleRuntimePromptProviderInterruption(
       providerInterruptionStateId,
     );
     const providerInterruptionRetryNextAttempt = providerInterruptionAttemptsUsed + 1;
+    const providerInterruptionRetryDelayMs = providerInterruptionContinuationRetryDelayMs(
+      providerInterruptionRetryNextAttempt,
+      providerInterruptionStateId,
+    );
     let willContinue = providerInterruptionAttemptsUsed < retryBudget.maxRetries;
     let continuationSetupError: string | undefined;
     const completedToolMessageCount = Math.max(0, input.toolMessages.size() - openToolCalls.length);
@@ -68,7 +75,7 @@ export async function handleRuntimePromptProviderInterruption(
       retryAttempt: willContinue ? providerInterruptionRetryNextAttempt : providerInterruptionAttemptsUsed,
       maxRetries: retryBudget.maxRetries,
       retryReason: "provider_interruption_continuation",
-      retryDelayMs: 0,
+      retryDelayMs: providerInterruptionRetryDelayMs,
       openToolCalls,
       completedToolMessageCount,
       receivedAnyText: input.receivedAnyText(),
@@ -98,7 +105,7 @@ export async function handleRuntimePromptProviderInterruption(
           retryAttempt: providerInterruptionAttemptsUsed,
           maxRetries: retryBudget.maxRetries,
           retryReason: "provider_interruption_continuation",
-          retryDelayMs: 0,
+          retryDelayMs: providerInterruptionRetryDelayMs,
           openToolCalls,
           completedToolMessageCount,
           receivedAnyText: input.receivedAnyText(),
@@ -135,7 +142,7 @@ export async function handleRuntimePromptProviderInterruption(
           threadId: input.threadId,
           attempt: providerInterruptionRetryNextAttempt,
           maxAttempts: retryBudget.maxRetries,
-          delayMs: 0,
+          delayMs: providerInterruptionRetryDelayMs,
           message: `Provider interrupted the stream; continuing from transcript: ${message}`,
         }),
       });
@@ -165,7 +172,7 @@ export async function handleRuntimePromptProviderInterruption(
         retryAttempt: willContinue ? providerInterruptionRetryNextAttempt : providerInterruptionAttemptsUsed,
         maxRetries: retryBudget.maxRetries,
         retryReason: "provider_interruption_continuation",
-        retryDelayMs: 0,
+        retryDelayMs: providerInterruptionRetryDelayMs,
         providerErrorDiagnostic,
         interruptedToolCalls: openToolCalls,
         completedToolMessageCount,

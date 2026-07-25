@@ -170,7 +170,7 @@ function resolveProviderCredential(providerId, env) {
       credentialEnv.GMI_CLOUD_API_KEY_FILE = env.GMI_CLOUD_API_KEY_FILE;
       sources.push("env:GMI_CLOUD_API_KEY_FILE");
     } else if (!env.GMI_CLOUD_API_KEY && !env.GMI_API_KEY) {
-      const defaultKeyFile = join(repoRoot, "ignored provider key files");
+      const defaultKeyFile = join(repoRoot, "ignored-provider-key-file.txt");
       if (existsSync(defaultKeyFile)) {
         credentialEnv.GMI_CLOUD_API_KEY_FILE = defaultKeyFile;
         sources.push(`file:${basename(defaultKeyFile)}`);
@@ -180,7 +180,7 @@ function resolveProviderCredential(providerId, env) {
     if (env.GMI_CLOUD_MODEL) credentialEnv.GMI_CLOUD_MODEL = env.GMI_CLOUD_MODEL;
     if (sources.length === 0) {
       throw new Error(
-        "Configure GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or the ignored ignored provider key files file before running live-seeded UI review.",
+        "Configure GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or the ignored ignored-provider-key-file.txt file before running live-seeded UI review.",
       );
     }
     return { env: credentialEnv, sources };
@@ -198,7 +198,7 @@ function resolveProviderCredential(providerId, env) {
     credentialEnv.AMBIENT_API_KEY_FILE = env.AMBIENT_API_KEY_FILE;
     sources.push("env:AMBIENT_API_KEY_FILE");
   } else if (!env.AMBIENT_API_KEY && !env.AMBIENT_AGENT_AMBIENT_API_KEY) {
-    const defaultKeyFile = join(repoRoot, "ignored provider key files");
+    const defaultKeyFile = join(repoRoot, "ignored-provider-key-file.txt");
     if (existsSync(defaultKeyFile)) {
       credentialEnv.AMBIENT_API_KEY_FILE = defaultKeyFile;
       sources.push(`file:${basename(defaultKeyFile)}`);
@@ -206,7 +206,7 @@ function resolveProviderCredential(providerId, env) {
   }
   if (sources.length === 0) {
     throw new Error(
-      "Configure AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or the ignored ignored provider key files file before running live-seeded UI review.",
+      "Configure AMBIENT_API_KEY, AMBIENT_AGENT_AMBIENT_API_KEY, AMBIENT_API_KEY_FILE, or the ignored ignored-provider-key-file.txt file before running live-seeded UI review.",
     );
   }
   return { env: credentialEnv, sources };
@@ -288,10 +288,10 @@ function redactedCollectorCommand(args) {
       AMBIENT_DESKTOP_WORKSPACE: "set",
       GMI_CLOUD_API_KEY: process.env.GMI_CLOUD_API_KEY ? "set" : undefined,
       GMI_API_KEY: process.env.GMI_API_KEY ? "set" : undefined,
-      GMI_CLOUD_API_KEY_FILE: process.env.GMI_CLOUD_API_KEY_FILE || existsSync(join(repoRoot, "ignored provider key files")) ? "set" : undefined,
+      GMI_CLOUD_API_KEY_FILE: process.env.GMI_CLOUD_API_KEY_FILE || existsSync(join(repoRoot, "ignored-provider-key-file.txt")) ? "set" : undefined,
       AMBIENT_API_KEY: process.env.AMBIENT_API_KEY ? "set" : undefined,
       AMBIENT_AGENT_AMBIENT_API_KEY: process.env.AMBIENT_AGENT_AMBIENT_API_KEY ? "set" : undefined,
-      AMBIENT_API_KEY_FILE: process.env.AMBIENT_API_KEY_FILE || existsSync(join(repoRoot, "ignored provider key files")) ? "set" : undefined,
+      AMBIENT_API_KEY_FILE: process.env.AMBIENT_API_KEY_FILE || existsSync(join(repoRoot, "ignored-provider-key-file.txt")) ? "set" : undefined,
     },
   };
 }

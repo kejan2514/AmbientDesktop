@@ -50,7 +50,7 @@ describe("workflow compiler live benchmark harness", () => {
       retryable: false,
       matchedPattern: "missing_provider_key",
     });
-    expect(classifyWorkflowCompilerLiveBenchmarkAttempt({ exitCode: 1, stdout: "", stderr: "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored provider key files for live Workflow Agent dogfood." })).toMatchObject({
+    expect(classifyWorkflowCompilerLiveBenchmarkAttempt({ exitCode: 1, stdout: "", stderr: "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored-provider-key-file.txt for live Workflow Agent dogfood." })).toMatchObject({
       status: "skipped",
       retryable: false,
       matchedPattern: "missing_provider_key",

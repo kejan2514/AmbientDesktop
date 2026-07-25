@@ -22,8 +22,8 @@ const finalScreenshotPath = join(runRoot, "phase3-add-cards-final-drafts.png");
 const cdpPort = Number(process.env.AMBIENT_KANBAN_ADD_CARDS_AFTER_TICKETIZATION_CDP_PORT || 0) || (await availablePort());
 const addCardsMaxElapsedMs = Number(process.env.AMBIENT_KANBAN_ADD_CARDS_AFTER_TICKETIZATION_MAX_TIMEOUT_MS || 0) || 900_000;
 const addCardsIdleMs = Number(process.env.AMBIENT_KANBAN_ADD_CARDS_AFTER_TICKETIZATION_IDLE_TIMEOUT_MS || 0) || 240_000;
-const defaultRepoKeyFile = join(repoRoot, "ignored provider key files");
-const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored provider key files");
+const defaultRepoKeyFile = join(repoRoot, "ignored-provider-key-file.txt");
+const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored-provider-key-file.txt");
 const keyFile = resolve(
   process.env.GMI_CLOUD_API_KEY_FILE ||
     (existsSync(defaultRepoKeyFile) ? defaultRepoKeyFile : defaultHomeCheckoutKeyFile),
@@ -270,7 +270,7 @@ async function sanitizeTempWorkspace() {
   ]) {
     await rm(join(workspace, path), { recursive: true, force: true });
   }
-  for (const path of ["ignored provider key files", "ignored provider key files", "brave_api_key.txt", ".env", ".env.local"]) {
+  for (const path of ["ignored-provider-key-file.txt", "ignored-provider-key-file.txt", "brave_api_key.txt", ".env", ".env.local"]) {
     await rm(join(workspace, path), { force: true });
   }
   await removeCredentialNamedFiles(workspace, 3);

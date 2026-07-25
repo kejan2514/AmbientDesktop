@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 export const DEFAULT_WORKFLOW_UI_DOGFOOD_SHARED_SNAPSHOT_ROOT =
-  "/Users/example/.ambient-hardening/snapshots/shared-secrets/example-shared-secrets-2026-05-14T02-16-32-0700";
+  "/Users/example/.ambient-hardening/snapshots/shared-secrets/example-shared-secrets";
 const DEFAULT_WORKFLOW_UI_DOGFOOD_SHARED_SNAPSHOT_NAME = basename(DEFAULT_WORKFLOW_UI_DOGFOOD_SHARED_SNAPSHOT_ROOT);
 const WORKFLOW_UI_DOGFOOD_SNAPSHOT_ROOT_ENV_VARS = [
   "AMBIENT_WORKFLOW_UI_DOGFOOD_SNAPSHOT_ROOT",
@@ -372,7 +372,7 @@ export function workflowUiDogfoodCredentialStatus(input) {
     if (env.GMI_CLOUD_API_KEY) sources.push("env:GMI_CLOUD_API_KEY");
     if (env.GMI_API_KEY) sources.push("env:GMI_API_KEY");
     if (env.GMI_CLOUD_API_KEY_FILE) sources.push("env:GMI_CLOUD_API_KEY_FILE");
-    const candidate = join(cwd, "ignored provider key files");
+    const candidate = join(cwd, "ignored-provider-key-file.txt");
     if (existsSync(candidate)) {
       defaultKeyFile = candidate;
       sources.push(`file:${basename(candidate)}`);
@@ -381,7 +381,7 @@ export function workflowUiDogfoodCredentialStatus(input) {
     if (env.AMBIENT_API_KEY) sources.push("env:AMBIENT_API_KEY");
     if (env.AMBIENT_AGENT_AMBIENT_API_KEY) sources.push("env:AMBIENT_AGENT_AMBIENT_API_KEY");
     if (env.AMBIENT_API_KEY_FILE) sources.push("env:AMBIENT_API_KEY_FILE");
-    const candidate = join(cwd, "ignored provider key files");
+    const candidate = join(cwd, "ignored-provider-key-file.txt");
     if (existsSync(candidate)) {
       defaultKeyFile = candidate;
       sources.push(`file:${basename(candidate)}`);

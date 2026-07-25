@@ -8,7 +8,7 @@ evidence bundle that can be shared with provider engineers.
 
 Example:
   python3 scripts/ambient_long_tool_call_stream_fixture.py \
-    --api-key-file /path/to/ambient_api_key.txt \
+    --api-key-file /path/to/ignored-provider-key-file.txt \
     --requested-content-chars 24000
 """
 
@@ -29,7 +29,7 @@ from typing import Any
 
 
 DEFAULT_BASE_URL = "https://api.ambient.xyz/v1"
-DEFAULT_MODEL = "moonshotai/kimi-k2.7-code"
+DEFAULT_MODEL = "example/model-id"
 DEFAULT_OUTPUT_DIR = Path("test-results/ambient-long-tool-call-stream-fixture")
 
 

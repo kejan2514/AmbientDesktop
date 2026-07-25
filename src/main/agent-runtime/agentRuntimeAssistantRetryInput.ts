@@ -7,6 +7,7 @@ export type AssistantFinalizationRetryReason =
   | "empty_assistant_response"
   | "pre_output_stream_stall"
   | "provider_error_before_tool_execution"
+  | "provider_context_overflow"
   | "provider_interruption_continuation";
 
 export interface AssistantFinalizationRetryState {

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { SessionManager } from "@mariozechner/pi-coding-agent";
 
 import type { CompactThreadInput, DesktopEvent, RecoverThreadContextInput } from "../../shared/desktopTypes";
+import { normalizeAmbientModelId, type AmbientModelRuntimeProfile } from "../../shared/ambientModels";
 import type { ContextUsageSnapshot, ThreadSummary } from "../../shared/threadTypes";
 import { ambientModel } from "./agentRuntimeAmbientFacade";
 import {
@@ -59,6 +60,7 @@ export interface AgentRuntimeContextRecoveryControllerOptions {
   getSession: (thread: ThreadSummary) => Promise<AgentRuntimeContextRecoverySession>;
   commitThreadPiSessionFile: (input: AgentRuntimeContextRecoveryCommitInput) => Promise<ThreadSummary | undefined>;
   ambientCliSkillMountForThread: (threadId: string) => ContextUsageAmbientCliSkillMountDiagnostic | undefined;
+  resolveModelRuntimeProfile?: (modelId?: string) => AmbientModelRuntimeProfile | undefined;
   emit: (event: DesktopEvent) => void;
   openSessionManager?: ContextUsageSessionManagerOpen;
   now?: () => Date;
@@ -79,12 +81,36 @@ export class AgentRuntimeContextRecoveryController {
   async getContextUsage(threadId: string): Promise<ContextUsageSnapshot> {
     const thread = this.options.store.getThread(threadId);
     const session = this.options.getActiveSession(threadId);
-    if (session) return this.recordContextUsageSnapshot(threadId, session);
+    if (
+      session &&
+      normalizeAmbientModelId(session.model?.id) === normalizeAmbientModelId(thread.model)
+    ) {
+      return this.recordContextUsageSnapshot(threadId, session);
+    }
+
+    if (session) {
+      const snapshot = this.unavailableContextUsageSnapshot(
+        thread,
+        "The selected model will report context usage after the pending model change is applied.",
+      );
+      return this.options.store.recordContextUsageSnapshot(snapshot);
+    }
 
     const latest = this.options.store.getLatestContextUsageSnapshot(threadId);
-    if (latest) return latest;
+    if (
+      latest &&
+      latest.modelId !== undefined &&
+      normalizeAmbientModelId(latest.modelId) === normalizeAmbientModelId(thread.model)
+    ) {
+      return latest;
+    }
 
-    const snapshot = this.unavailableContextUsageSnapshot(thread, "No active Pi session has reported context usage yet.");
+    const snapshot = this.unavailableContextUsageSnapshot(
+      thread,
+      latest
+        ? "The selected model has not reported context usage yet."
+        : "No active Pi session has reported context usage yet.",
+    );
     return this.options.store.recordContextUsageSnapshot(snapshot);
   }
 
@@ -232,10 +258,15 @@ export class AgentRuntimeContextRecoveryController {
     const appWorkspace = this.options.store.getWorkspace();
     return buildUnavailableContextUsageSnapshot({
       threadId: thread.id,
+      modelId: thread.model,
       sessionFile: thread.piSessionFile,
       sessionDir: join(appWorkspace.sessionPath, thread.id),
       workspacePath: thread.workspacePath,
-      contextWindow: ambientModel(thread.model, normalizeAmbientBaseUrl(getAmbientProviderStatus(thread.model).baseUrl)).contextWindow,
+      contextWindow: ambientModel(
+        thread.model,
+        normalizeAmbientBaseUrl(getAmbientProviderStatus(thread.model).baseUrl),
+        this.options.resolveModelRuntimeProfile?.(thread.model),
+      ).contextWindow,
       message,
     });
   }

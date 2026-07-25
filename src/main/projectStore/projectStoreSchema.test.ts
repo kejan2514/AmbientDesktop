@@ -138,6 +138,7 @@ describe("project store schema bootstrap", () => {
   it("keeps runtime support migration columns in the schema module", () => {
     expect(PROJECT_STORE_MIGRATION_COLUMN_GROUPS.runtimeSupport).toEqual([
       ["runs", "diagnostics_json", "TEXT"],
+      ["context_usage_snapshots", "model_id", "TEXT"],
       ["message_voice_states", "last_audio_path", "TEXT"],
       ["plugin_trust", "fingerprint", "TEXT"],
       ["permission_audit", "decision_source", "TEXT"],
@@ -325,6 +326,8 @@ describe("project store schema bootstrap", () => {
     expect(calls).toEqual([
       "PRAGMA table_info(runs)",
       "ALTER TABLE runs ADD COLUMN diagnostics_json TEXT",
+      "PRAGMA table_info(context_usage_snapshots)",
+      "ALTER TABLE context_usage_snapshots ADD COLUMN model_id TEXT",
       "PRAGMA table_info(message_voice_states)",
       "ALTER TABLE message_voice_states ADD COLUMN last_audio_path TEXT",
       "PRAGMA table_info(plugin_trust)",

@@ -166,6 +166,7 @@ export async function runAgentRuntimeSendPromptRun<Session extends AgentRuntimeS
       emitRunEvent,
     });
     if (!promptExecutionResult.completed) return;
+    if (!session) throw new Error("Ambient/Pi prompt completed without an active session.");
 
     const providerRetry = providerRetryState.snapshot();
     const promptRunState = promptExecutionResult.promptRunState;
@@ -223,6 +224,7 @@ export async function runAgentRuntimeSendPromptRun<Session extends AgentRuntimeS
       sendSessionLifecycle.refreshStoredSymphonyParentModeVerifiedLaunch();
     await input.promptOutcomes.handlePromptFailure({
       error,
+      session,
       sendInput: input.sendInput,
       runId: input.runId,
       runWorkspacePath: input.runWorkspacePath,

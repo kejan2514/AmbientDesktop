@@ -2,7 +2,7 @@ import type { DesktopEvent } from "../../shared/desktopTypes";
 import type { AmbientFeatureFlagSnapshot } from "../../shared/featureFlags";
 import type { AgentMemoryRuntimeSnapshot } from "../../shared/agentMemoryDiagnostics";
 import { normalizeAmbientModelId } from "../../shared/ambientModels";
-import type { ModelRuntimeSettings, ThreadSummary } from "../../shared/threadTypes";
+import type { ContextUsageSnapshot, ModelRuntimeSettings, ThreadSummary } from "../../shared/threadTypes";
 import { runtimeSettingsActivity } from "./agentRuntimeRetrySettings";
 import type { AgentRuntimePiSession } from "./agentRuntimeSessionFactoryController";
 import { AgentRuntimeSessionRegistry } from "./agentRuntimeSessionRegistry";
@@ -14,6 +14,7 @@ export interface AgentRuntimeSettingsSessionControllerOptions {
   tencentMemoryRuntimeSnapshots: Map<string, AgentMemoryRuntimeSnapshot>;
   getThread: (threadId: string) => ThreadSummary;
   switchSessionToThreadModel: (thread: ThreadSummary, session: AgentRuntimePiSession) => Promise<void>;
+  recordUnavailableContextUsageSnapshot: (thread: ThreadSummary, message: string) => ContextUsageSnapshot;
   emit: (event: DesktopEvent) => void;
 }
 
@@ -62,6 +63,15 @@ export class AgentRuntimeSettingsSessionController {
     return this.resetSessionsAndClearCaches();
   }
 
+  applyModelRuntimeProfiles(): {
+    disposedSessions: number;
+    deferredSessions: number;
+    disposedThreadIds: string[];
+    deferredThreadIds: string[];
+  } {
+    return this.resetSessionsAndClearCaches();
+  }
+
   async applyThreadModelSettings(threadId: string): Promise<{
     switchedSessions: number;
     deferredSessions: number;
@@ -78,6 +88,7 @@ export class AgentRuntimeSettingsSessionController {
     };
     if (!session) {
       this.options.sessions.clearRuntimeSettingsStale(threadId);
+      this.recordPendingModelContext(thread, "The selected model will report context usage after its first response.");
       return result;
     }
 
@@ -89,6 +100,10 @@ export class AgentRuntimeSettingsSessionController {
 
     if (this.options.activeRuns.has(threadId)) {
       this.options.sessions.markRuntimeSettingsStale(threadId);
+      this.recordPendingModelContext(
+        thread,
+        "The selected model will report context usage after the current run finishes and the model change is applied.",
+      );
       result.deferredSessions = 1;
       result.deferredThreadIds.push(threadId);
       return result;
@@ -98,6 +113,11 @@ export class AgentRuntimeSettingsSessionController {
     result.switchedSessions = 1;
     result.switchedThreadIds.push(threadId);
     return result;
+  }
+
+  private recordPendingModelContext(thread: ThreadSummary, message: string): void {
+    const snapshot = this.options.recordUnavailableContextUsageSnapshot(thread, message);
+    this.options.emit({ type: "context-usage-updated", snapshot });
   }
 
   applyThreadMemorySettings(threadId: string): {

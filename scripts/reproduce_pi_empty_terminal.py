@@ -30,7 +30,7 @@ from typing import Any
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_BASE_URL = "https://api.ambient.xyz/v1"
-DEFAULT_MODEL = "moonshotai/kimi-k2.7-code"
+DEFAULT_MODEL = "example/model-id"
 DEFAULT_SESSION_LOG = pathlib.Path(
     "/Users/example/.ambient-hardening/bases/example-core-no-secrets/"
     "workspace/.ambient-codex/sessions/fb1c7ffc-732d-421c-a429-c66c4628bf60/"
@@ -46,11 +46,11 @@ def read_api_key() -> str:
             return value
     candidates = [
         os.environ.get("AMBIENT_API_KEY_FILE", ""),
-        str(REPO_ROOT / "ignored provider key files"),
-        str(REPO_ROOT.parent / "ignored provider key files"),
-        "/Users/example/Documents/ambientCoder/ignored provider key files",
-        "/Users/example/Documents/New project 3/ignored provider key files",
-        str(pathlib.Path.home() / "ignored provider key files"),
+        str(REPO_ROOT / "ignored-provider-key-file.txt"),
+        str(REPO_ROOT.parent / "ignored-provider-key-file.txt"),
+        "/Users/example/Documents/ambientCoder/ignored-provider-key-file.txt",
+        "/Users/example/Documents/New project 3/ignored-provider-key-file.txt",
+        str(pathlib.Path.home() / "ignored-provider-key-file.txt"),
     ]
     for raw in candidates:
         if not raw:
@@ -60,7 +60,7 @@ def read_api_key() -> str:
             value = path.read_text(encoding="utf-8").strip()
             if value:
                 return value
-    raise SystemExit("Ambient API key missing. Set AMBIENT_API_KEY or provide ignored provider key files.")
+    raise SystemExit("Ambient API key missing. Set AMBIENT_API_KEY or provide ignored-provider-key-file.txt.")
 
 
 def text_from_content(content: Any) -> str:

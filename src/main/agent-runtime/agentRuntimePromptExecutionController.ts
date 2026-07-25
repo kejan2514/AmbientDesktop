@@ -40,6 +40,8 @@ import type { RuntimeToolExecutionWatchdog } from "./runtimeToolExecutionWatchdo
 import type { RuntimeToolMessageController } from "./runtimeToolMessageController";
 import type { RuntimePermissionWaitController } from "./runtimePermissionWaitController";
 import type { RuntimeOpenToolFailureReason } from "./openToolFailureUpdates";
+import { subscribeAmbientProviderTransportActivity } from "../ambient/ambientProviderTransportActivity";
+import { resolveAdaptivePiPreStreamTimeoutMs } from "./agentRuntimeTimeouts";
 
 export interface AgentRuntimePromptExecutionSession extends RuntimePromptExecutionSession {
   steer(prompt: string): Promise<unknown>;
@@ -136,6 +138,8 @@ export class AgentRuntimePromptExecutionController<
 
   async runPrompt(input: RunAgentRuntimePromptExecutionInput<Session>): Promise<RunAgentRuntimePromptExecutionResult> {
     let streamWatchdog: RuntimeStreamWatchdogController | undefined;
+    let pendingPreStreamTimeoutMs: number | undefined;
+    let pendingTransportActivity = false;
     let finalizeAssistantTerminalRun: (pendingCompletion?: Promise<unknown>) => Promise<void> = async () => {
       throw new Error("Assistant terminal finalization requested before prompt start.");
     };
@@ -272,6 +276,23 @@ export class AgentRuntimePromptExecutionController<
       toolEventDispatcher,
     });
 
+    const unsubscribeProviderTransport = subscribeAmbientProviderTransportActivity(input.session, (activity) => {
+      if (activity.kind === "request_prepared") {
+        const timeoutMs = resolveAdaptivePiPreStreamTimeoutMs({
+          configuredTimeoutMs: input.preStreamTimeoutMs,
+          inputTokens: activity.inputTokens,
+          thinkingLevel: input.thread.thinkingLevel,
+        });
+        if (streamWatchdog) streamWatchdog.setPreStreamTimeoutMs(timeoutMs);
+        else pendingPreStreamTimeoutMs = timeoutMs;
+        return;
+      }
+      promptControllers.emptyAssistantStallWatchdog.refreshOnStreamActivity();
+      promptControllers.toolArgumentWatchdog.refreshOnTransportActivity();
+      if (streamWatchdog) streamWatchdog.markTransportActivity();
+      else pendingTransportActivity = true;
+    });
+
     const promptExecution = (this.options.createPromptExecutionSetup ?? createRuntimePromptExecutionSetup)({
       threadId: input.thread.id,
       session: input.session,
@@ -312,6 +333,10 @@ export class AgentRuntimePromptExecutionController<
       emitRunEvent: input.emitRunEvent,
       setStreamWatchdog: (controller) => {
         streamWatchdog = controller;
+        if (pendingPreStreamTimeoutMs !== undefined) {
+          controller.setPreStreamTimeoutMs(pendingPreStreamTimeoutMs);
+        }
+        if (pendingTransportActivity) controller.markTransportActivity();
         input.setStreamWatchdog(controller);
       },
       queuedMessages: input.queuedMessages,
@@ -321,7 +346,10 @@ export class AgentRuntimePromptExecutionController<
       promptRunState: promptControllers.promptRunState,
       streamTimeoutMessage: input.streamTimeoutMessage,
       finalizeAssistantTerminalRun: () => finalizeAssistantTerminalRun(),
-      unsubscribePromptEvents: unsubscribe,
+      unsubscribePromptEvents: () => {
+        unsubscribeProviderTransport();
+        unsubscribe();
+      },
     });
     promptControllers.promptRunState.setFinalizedAfterToolIdle(promptCompletionLoop.finalizedAfterToolIdle);
     return {

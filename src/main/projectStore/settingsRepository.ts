@@ -32,6 +32,10 @@ import { createModelRuntimeCatalog } from "./projectStoreModelProviderFacade";
 import { migrateProjectStorePermissionModeDefaultsToWorkspace } from "./projectStoreSchema";
 import { DEFAULT_COMPACTION_SETTINGS, normalizeCompactionSettings } from "./projectStoreSettings";
 
+const MODEL_RUNTIME_TIMEOUT_DEFAULTS_VERSION_KEY = "modelRuntimeTimeoutDefaultsVersion";
+const CURRENT_MODEL_RUNTIME_TIMEOUT_DEFAULTS_VERSION = 2;
+const LEGACY_MODEL_RUNTIME_PROVIDER_STREAM_IDLE_TIMEOUT_MS = 30_000;
+
 export class ProjectStoreSettingsRepository {
   constructor(private readonly db: Database.Database) {}
 
@@ -107,7 +111,16 @@ export class ProjectStoreSettingsRepository {
   }
 
   getModelRuntimeSettings(): ModelRuntimeSettings {
-    return normalizeModelRuntimeSettings(this.getSetting("modelRuntime", DEFAULT_MODEL_RUNTIME_SETTINGS));
+    const settings = normalizeModelRuntimeSettings(this.getSetting("modelRuntime", DEFAULT_MODEL_RUNTIME_SETTINGS));
+    const timeoutDefaultsVersion = Number(this.getSetting(MODEL_RUNTIME_TIMEOUT_DEFAULTS_VERSION_KEY, 0));
+    if (timeoutDefaultsVersion >= CURRENT_MODEL_RUNTIME_TIMEOUT_DEFAULTS_VERSION) return settings;
+
+    const migrated = settings.providerStreamIdleTimeoutMs === LEGACY_MODEL_RUNTIME_PROVIDER_STREAM_IDLE_TIMEOUT_MS
+      ? { ...settings, providerStreamIdleTimeoutMs: DEFAULT_MODEL_RUNTIME_SETTINGS.providerStreamIdleTimeoutMs }
+      : settings;
+    this.setSetting("modelRuntime", migrated);
+    this.setSetting(MODEL_RUNTIME_TIMEOUT_DEFAULTS_VERSION_KEY, CURRENT_MODEL_RUNTIME_TIMEOUT_DEFAULTS_VERSION);
+    return migrated;
   }
 
   setModelRuntimeSettings(input: Partial<ModelRuntimeSettings>): ModelRuntimeSettings {

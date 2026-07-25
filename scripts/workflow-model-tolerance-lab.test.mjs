@@ -264,7 +264,7 @@ describe("workflow model tolerance lab", () => {
       matchedPattern: "rate_limit",
       retryable: true,
     });
-    expect(classifyWorkflowModelToleranceAttempt({ errorMessage: "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored provider key files" })).toMatchObject({
+    expect(classifyWorkflowModelToleranceAttempt({ errorMessage: "Set GMI_CLOUD_API_KEY, GMI_API_KEY, GMI_CLOUD_API_KEY_FILE, or provide ignored-provider-key-file.txt" })).toMatchObject({
       status: "skipped",
       matchedPattern: "missing_provider_key",
     });

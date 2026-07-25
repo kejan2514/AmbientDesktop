@@ -35,6 +35,7 @@ function createInput(overrides: Partial<RuntimePromptControllerSetupInput> = {})
   const toolArgumentWatchdog: RuntimeToolArgumentWatchdog = {
     clear: vi.fn(),
     schedule: vi.fn(),
+    refreshOnTransportActivity: vi.fn(),
   };
   const emptyAssistantStallWatchdog: RuntimeEmptyAssistantStallWatchdog = {
     clear: vi.fn(),

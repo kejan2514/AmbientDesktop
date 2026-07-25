@@ -6,6 +6,7 @@ import {
   resolveAmbientModelRuntimeProfile,
 } from "../../shared/ambientModels";
 import { ambientModel, createAmbientProviderExtension } from "./ambientProviderModel";
+import { GMI_CLOUD_GLM_5_2_FP8_MODEL } from "./gmiCloudModelRouting";
 
 describe("ambientProviderModel", () => {
   it("builds the Ambient Pi model descriptor", () => {
@@ -36,7 +37,7 @@ describe("ambientProviderModel", () => {
         cacheWrite: 0,
       },
       contextWindow: 202752,
-      maxTokens: 202752,
+      maxTokens: 32000,
     });
     expect(ambientModel("glm-5.1", "https://ambient.example/v1").compat).not.toHaveProperty("thinkingFormat");
   });
@@ -90,7 +91,26 @@ describe("ambientProviderModel", () => {
       },
       input: ["text", "image"],
       contextWindow: 262144,
-      maxTokens: 262144,
+      maxTokens: 32000,
+    });
+  });
+
+  it("uses a provider request id without losing canonical model capabilities", () => {
+    expect(
+      ambientModel(
+        AMBIENT_GLM_5_2_FP8_MODEL,
+        "https://gmi.example/v1",
+        resolveAmbientModelRuntimeProfile(AMBIENT_GLM_5_2_FP8_MODEL),
+        { requestModelId: GMI_CLOUD_GLM_5_2_FP8_MODEL },
+      ),
+    ).toMatchObject({
+      id: GMI_CLOUD_GLM_5_2_FP8_MODEL,
+      name: "GLM 5.2",
+      contextWindow: 202752,
+      maxTokens: 32000,
+      compat: {
+        supportsReasoningEffort: true,
+      },
     });
   });
 

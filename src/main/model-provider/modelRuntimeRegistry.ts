@@ -168,6 +168,7 @@ function cloneProviderDescriptor(provider: AmbientProviderDescriptor): AmbientPr
 function cloneModelRuntimeProfile(profile: AmbientModelRuntimeProfile): AmbientModelRuntimeProfile {
   return {
     ...profile,
+    ...(profile.limitMetadata ? { limitMetadata: { ...profile.limitMetadata } } : {}),
     providerQuirks: [...profile.providerQuirks],
   };
 }

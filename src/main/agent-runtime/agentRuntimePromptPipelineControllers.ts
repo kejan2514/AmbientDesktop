@@ -128,6 +128,7 @@ export function createAgentRuntimePromptPipelineControllers({
     getSession: async (thread) => callbacks.getSession(thread) as Promise<AgentRuntimeContextRecoverySession>,
     commitThreadPiSessionFile: (input) => callbacks.commitThreadPiSessionFile(input),
     ambientCliSkillMountForThread: (threadId) => ambientCliSkillMountDiagnostics.get(threadId),
+    resolveModelRuntimeProfile: (modelId) => features.modelRuntime?.resolveModelRuntimeProfile?.(modelId),
     emit: (event) => callbacks.emit(event),
   });
   const plannerFinalization = new AgentRuntimePlannerFinalizationController({
@@ -221,6 +222,7 @@ export function createAgentRuntimePromptPipelineControllers({
       plannerFinalization.schedulePlannerDurableRepairFollowUp(followUp, workspacePath),
     send: (followUp, followUpHooks) => callbacks.send(followUp, followUpHooks),
     emitError: (message, threadId, workspacePath) => callbacks.emit({ type: "error", message, threadId, workspacePath }),
+    learnProviderContextLimit: features.modelRuntime?.learnProviderContextLimit,
   });
   const promptExecutions = new AgentRuntimePromptExecutionController<PiSession>({
     preflightBeforePrompt: (preflightInput) => callbacks.preflightBeforePrompt(preflightInput),

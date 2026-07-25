@@ -21,8 +21,8 @@ const taskActionsScreenshotPath = join(runRoot, "phase7-contrast-native-task-act
 const cdpPort = Number(process.env.AMBIENT_KANBAN_CONTRAST_NATIVE_ACTIONS_CDP_PORT || 0) || (await availablePort());
 const workerRunMaxElapsedMs = Number(process.env.AMBIENT_KANBAN_CONTRAST_NATIVE_ACTIONS_RUN_MAX_TIMEOUT_MS || 0) || 1_200_000;
 const workerIdleTimeoutMs = Number(process.env.AMBIENT_KANBAN_CONTRAST_NATIVE_ACTIONS_RUN_IDLE_TIMEOUT_MS || 0) || 300_000;
-const defaultRepoKeyFile = join(repoRoot, "ignored provider key files");
-const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored provider key files");
+const defaultRepoKeyFile = join(repoRoot, "ignored-provider-key-file.txt");
+const defaultHomeCheckoutKeyFile = join(homedir(), "ambientCoder", "ignored-provider-key-file.txt");
 const keyFile = resolve(
   process.env.GMI_CLOUD_API_KEY_FILE ||
     (existsSync(defaultRepoKeyFile) ? defaultRepoKeyFile : defaultHomeCheckoutKeyFile),

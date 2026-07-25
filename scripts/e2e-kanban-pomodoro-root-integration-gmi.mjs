@@ -18,7 +18,7 @@ const integrationScreenshotPath = join(runRoot, "phase2-pomodoro-integration.png
 const cdpPort = Number(process.env.AMBIENT_KANBAN_POMODORO_ROOT_CDP_PORT || 0) || (await availablePort());
 const workerRunMaxElapsedMs = Number(process.env.AMBIENT_KANBAN_POMODORO_ROOT_RUN_MAX_TIMEOUT_MS || 0) || 1_200_000;
 const workerIdleTimeoutMs = Number(process.env.AMBIENT_KANBAN_POMODORO_ROOT_RUN_IDLE_TIMEOUT_MS || 0) || 300_000;
-const keyFile = resolve(process.env.GMI_CLOUD_API_KEY_FILE || join(repoRoot, "ignored provider key files"));
+const keyFile = resolve(process.env.GMI_CLOUD_API_KEY_FILE || join(repoRoot, "ignored-provider-key-file.txt"));
 const defaultSnapshotWorkspace = join(homedir(), "Documents", "ambientCoderArchive");
 const sourceWorkspace =
   process.env.AMBIENT_KANBAN_POMODORO_ROOT_SNAPSHOT_WORKSPACE ||

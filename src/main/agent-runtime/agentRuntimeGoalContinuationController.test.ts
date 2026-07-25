@@ -419,7 +419,50 @@ describe("AgentRuntimeGoalContinuationController", () => {
     });
   });
 
-  it("stops continuation at budget, usage, and no-progress limits", async () => {
+  it("continues goals beyond eight turns when no explicit budget is set", async () => {
+    await withController(async ({ store, controller, threadId, send }) => {
+      const goal = store.createThreadGoalIfAbsent({ threadId, objective: "Keep working without a hidden turn ceiling" });
+      store.accountThreadGoalUsage({ threadId, goalId: goal.goalId, continuationTurnDelta: 8 });
+
+      await controller.maybeContinueGoalIfIdle(threadId, goal.goalId);
+
+      expect(store.getThreadGoal(threadId)).toMatchObject({
+        status: "active",
+        continuationTurns: 9,
+      });
+      expect(send).toHaveBeenCalledWith(expect.objectContaining({
+        threadId,
+        goalContinuation: { goalId: goal.goalId },
+      }));
+    });
+  });
+
+  it("resumes goals previously stopped by the removed eight-turn ceiling", async () => {
+    await withController(async ({ store, controller, threadId, send }) => {
+      const goal = store.createThreadGoalIfAbsent({ threadId, objective: "Resume legacy usage-limited work" });
+      store.accountThreadGoalUsage({ threadId, goalId: goal.goalId, continuationTurnDelta: 8 });
+      store.markThreadGoalStatus(threadId, "usage_limited", {
+        expectedGoalId: goal.goalId,
+        statusReason: "Paused after 8 automatic continuation turns.",
+      });
+      const resumed = store.setThreadGoal({
+        threadId,
+        expectedGoalId: goal.goalId,
+        status: "active",
+      });
+
+      expect(resumed).toMatchObject({ status: "active", continuationTurns: 8 });
+      await controller.maybeContinueGoalIfIdle(threadId, goal.goalId);
+
+      expect(store.getThreadGoal(threadId)).toMatchObject({
+        status: "active",
+        continuationTurns: 9,
+      });
+      expect(send).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("stops continuation at explicit budget and no-progress limits", async () => {
     await withController(async ({ store, controller, threadId, send }) => {
       const budgetGoal = store.createThreadGoalIfAbsent({
         threadId,
@@ -436,17 +479,6 @@ describe("AgentRuntimeGoalContinuationController", () => {
 
       const clearedBudgetGoal = store.clearThreadGoal(threadId, budgetGoal.goalId);
       expect(clearedBudgetGoal).toBeDefined();
-      const usageGoal = store.createThreadGoalIfAbsent({ threadId, objective: "Usage guard" });
-      store.accountThreadGoalUsage({ threadId, goalId: usageGoal.goalId, continuationTurnDelta: 8 });
-
-      await controller.maybeContinueGoalIfIdle(threadId, usageGoal.goalId);
-      expect(store.getThreadGoal(threadId)).toMatchObject({
-        status: "usage_limited",
-        statusReason: "Paused after 8 automatic continuation turns.",
-      });
-
-      const clearedUsageGoal = store.clearThreadGoal(threadId, usageGoal.goalId);
-      expect(clearedUsageGoal).toBeDefined();
       const noProgressGoal = store.createThreadGoalIfAbsent({ threadId, objective: "No-progress guard" });
       store.accountThreadGoalUsage({ threadId, goalId: noProgressGoal.goalId, noProgressTurnDelta: 3 });
 

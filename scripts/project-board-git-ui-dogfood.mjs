@@ -1190,8 +1190,8 @@ async function readAmbientApiKey() {
   if (process.env.AMBIENT_AGENT_AMBIENT_API_KEY) return process.env.AMBIENT_AGENT_AMBIENT_API_KEY;
   const candidates = [
     process.env.AMBIENT_API_KEY_FILE,
-    join(process.cwd(), "ignored provider key files"),
-    join(process.cwd(), "..", "ignored provider key files"),
+    join(process.cwd(), "ignored-provider-key-file.txt"),
+    join(process.cwd(), "..", "ignored-provider-key-file.txt"),
   ].filter(Boolean);
   for (const candidate of candidates) {
     try {

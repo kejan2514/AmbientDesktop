@@ -2,7 +2,6 @@ import type { RuntimeActivity, RuntimeContinuationSource, ThreadGoal, ThreadSumm
 
 export const GOAL_MODE_TOOL_NAMES = ["get_goal", "create_goal", "update_goal"] as const;
 export const GOAL_COMPLETION_MESSAGE_KIND = "goal-completion";
-export const GOAL_MAX_CONTINUATION_TURNS = 8;
 export const GOAL_NO_PROGRESS_TURN_LIMIT = 3;
 export const GOAL_PROVIDER_INFRA_FAILURE_LIMIT = 2;
 type RuntimeGoalActivity = Extract<RuntimeActivity, { kind: "goal" }>;

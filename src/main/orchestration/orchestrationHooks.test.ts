@@ -6,8 +6,8 @@ import { runWorkflowHook, sanitizeOutput } from "./orchestrationHooks";
 
 describe("sanitizeOutput", () => {
   it("redacts common secret shapes", () => {
-    expect(sanitizeOutput("AMBIENT_API_KEY=sk-1234567890abcdef Bearer abcdefghijklmnop")).toBe(
-      "AMBIENT_API_KEY=[redacted] Bearer [redacted]",
+    expect(sanitizeOutput("AMBIENT_API_KEY_FILE=<ignored-key-file> Bearer abcdefghijklmnop")).toBe(
+      "AMBIENT_API_KEY_FILE=<ignored-key-file> Bearer [redacted]",
     );
   });
 });

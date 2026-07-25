@@ -51,6 +51,10 @@ export interface AmbientModelStatusProvider {
 export interface AmbientModelStatusCapabilities {
   contextWindowTokens?: number;
   maxOutputTokens?: number;
+  effectiveLimitSource?: NonNullable<AmbientModelRuntimeProfile["limitMetadata"]>["source"];
+  requestedOutputTokens?: number;
+  advertisedContextWindowTokens?: number;
+  limitObservedAt?: string;
   supportsVision: boolean;
   supportsAudio: boolean;
   toolUse: AmbientModelToolUseSupport;
@@ -173,6 +177,14 @@ export function buildAmbientModelStatus(input: BuildAmbientModelStatusInput): Am
     capabilities: {
       ...(runningProfile.contextWindowTokens ? { contextWindowTokens: runningProfile.contextWindowTokens } : {}),
       ...(runningProfile.maxOutputTokens ? { maxOutputTokens: runningProfile.maxOutputTokens } : {}),
+      ...(runningProfile.limitMetadata?.source ? { effectiveLimitSource: runningProfile.limitMetadata.source } : {}),
+      ...(runningProfile.limitMetadata?.requestedOutputTokens
+        ? { requestedOutputTokens: runningProfile.limitMetadata.requestedOutputTokens }
+        : {}),
+      ...(runningProfile.limitMetadata?.advertisedContextWindowTokens
+        ? { advertisedContextWindowTokens: runningProfile.limitMetadata.advertisedContextWindowTokens }
+        : {}),
+      ...(runningProfile.limitMetadata?.observedAt ? { limitObservedAt: runningProfile.limitMetadata.observedAt } : {}),
       supportsVision: runningProfile.supportsVision,
       supportsAudio: runningProfile.supportsAudio,
       toolUse: runningProfile.toolUse,
@@ -296,6 +308,16 @@ function modelStatusWarnings(input: {
   }
   if (!input.provider.supportsTools) {
     warnings.add(`Provider ${input.provider.id} does not advertise Ambient tool support.`);
+  }
+  if (
+    input.runningProfile.limitMetadata?.source === "provider-error" &&
+    input.runningProfile.limitMetadata.advertisedContextWindowTokens &&
+    input.runningProfile.contextWindowTokens &&
+    input.runningProfile.limitMetadata.advertisedContextWindowTokens !== input.runningProfile.contextWindowTokens
+  ) {
+    warnings.add(
+      `Ambient is using the provider-observed ${input.runningProfile.contextWindowTokens.toLocaleString()}-token context limit instead of the advertised ${input.runningProfile.limitMetadata.advertisedContextWindowTokens.toLocaleString()} tokens.`,
+    );
   }
   return [...warnings];
 }

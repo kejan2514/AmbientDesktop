@@ -16,6 +16,7 @@ describe("ProjectStoreContextUsageRepository", () => {
       CREATE TABLE context_usage_snapshots (
         id TEXT PRIMARY KEY,
         thread_id TEXT NOT NULL,
+        model_id TEXT,
         source TEXT NOT NULL,
         tokens INTEGER,
         context_window INTEGER,
@@ -42,6 +43,7 @@ describe("ProjectStoreContextUsageRepository", () => {
     });
     const latest = repository.recordContextUsageSnapshot({
       threadId: "thread-1",
+      modelId: "example/model-id",
       source: "provider-plus-estimate",
       tokens: 42_000,
       contextWindow: 200_000,
@@ -54,6 +56,7 @@ describe("ProjectStoreContextUsageRepository", () => {
 
     expect(latest).toMatchObject({
       threadId: "thread-1",
+      modelId: "example/model-id",
       source: "provider-plus-estimate",
       tokens: 42_000,
       contextWindow: 200_000,

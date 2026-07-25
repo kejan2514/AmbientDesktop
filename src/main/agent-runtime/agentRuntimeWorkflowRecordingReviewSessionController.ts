@@ -150,7 +150,12 @@ export class AgentRuntimeWorkflowRecordingReviewSessionController {
     this.dependencies.mkdirSync(agentDir, { recursive: true });
     this.dependencies.mkdirSync(reviewSessionDir, { recursive: true });
 
-    const model = this.dependencies.ambientModel(thread.model, this.dependencies.normalizeAmbientBaseUrl(provider.baseUrl));
+    const model = this.dependencies.ambientModel(
+      thread.model,
+      this.dependencies.normalizeAmbientBaseUrl(provider.baseUrl),
+      undefined,
+      { requestModelId: provider.model },
+    );
     const settingsManager = this.dependencies.createSettingsManager(workspace.path, agentDir);
     this.applySessionSettings(settingsManager);
 

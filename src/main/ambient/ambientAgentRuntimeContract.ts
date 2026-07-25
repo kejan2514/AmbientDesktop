@@ -45,6 +45,17 @@ export {
 } from "./ambientProviderModel";
 
 export {
+  AMBIENT_CONTEXT_SAFETY_MARGIN_TOKENS,
+  PI_OPENAI_COMPAT_MAX_OUTPUT_TOKENS,
+  ambientProviderInputTokenBudget,
+  ambientRequestedOutputTokens,
+  parseAmbientProviderContextOverflow,
+} from "./ambientModelLimits";
+export type {
+  AmbientProviderContextOverflow,
+} from "./ambientModelLimits";
+
+export {
   ambientWorkflowsArchiveText,
   ambientWorkflowsDescribeText,
   ambientWorkflowsInjectText,

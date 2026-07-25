@@ -9,6 +9,10 @@ import {
   runtimeCompactionStartingActivity,
 } from "./agentRuntimeCompactionActivity";
 import { preflightPrompt } from "../../shared/contextAccounting";
+import {
+  AMBIENT_CONTEXT_SAFETY_MARGIN_TOKENS,
+  ambientRequestedOutputTokens,
+} from "./agentRuntimeAmbientFacade";
 
 export const PROMPT_PREFLIGHT_COMPACTION_INSTRUCTIONS =
   "Prepare the session to accept the next user prompt. Preserve current task status, files, constraints, and blockers.";
@@ -37,11 +41,12 @@ export async function runPromptPreflightBeforePrompt<TSession extends PromptPref
 ): Promise<void> {
   const isRunStoreActive = input.isRunStoreActive ?? (() => true);
   const usage = contextUsagePreflightInput(input.session, input.unavailableContextWindow);
+  const requestOutputReserve = ambientRequestedOutputTokens(input.session.model?.maxTokens) + AMBIENT_CONTEXT_SAFETY_MARGIN_TOKENS;
   const result = preflightPrompt({
     prompt: input.promptContent,
     currentTokens: usage.currentTokens,
     contextWindow: usage.contextWindow,
-    reserveTokens: input.compactionSettings.reserveTokens,
+    reserveTokens: Math.max(input.compactionSettings.reserveTokens, requestOutputReserve),
     hardPreflightPercent: input.compactionSettings.hardPreflightPercent,
   });
   if (result.promptTooLarge) {

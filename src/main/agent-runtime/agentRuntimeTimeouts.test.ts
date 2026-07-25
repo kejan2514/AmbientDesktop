@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   piStreamStallTimeoutMessage,
   piStreamStartTimeoutMessage,
+  resolveAdaptivePiPreStreamTimeoutMs,
   resolveChatPiEmptyAssistantStallTimeoutMs,
   resolvePostToolContinuationIdleMs,
   resolvePostToolFinalizationTickMs,
@@ -15,7 +16,7 @@ describe("agentRuntimeTimeouts", () => {
   });
 
   it("keeps workflow recording review stream timeout defaults and minimums", () => {
-    expect(resolveWorkflowRecordingReviewStreamIdleTimeoutMs({})).toBe(45_000);
+    expect(resolveWorkflowRecordingReviewStreamIdleTimeoutMs({})).toBe(120_000);
     expect(resolveWorkflowRecordingReviewStreamIdleTimeoutMs({
       AMBIENT_WORKFLOW_RECORDING_REVIEW_STREAM_IDLE_TIMEOUT_MS: "4000",
     })).toBe(5_000);
@@ -24,13 +25,13 @@ describe("agentRuntimeTimeouts", () => {
     })).toBe(6_000);
     expect(resolveWorkflowRecordingReviewStreamIdleTimeoutMs({
       AMBIENT_WORKFLOW_RECORDING_REVIEW_STREAM_IDLE_TIMEOUT_MS: "not-a-number",
-    })).toBe(45_000);
+    })).toBe(120_000);
   });
 
   it("uses chat empty-assistant overrides only in E2E mode", () => {
     expect(resolveChatPiEmptyAssistantStallTimeoutMs({
       AMBIENT_CHAT_PI_EMPTY_ASSISTANT_STALL_TIMEOUT_MS: "2500",
-    })).toBe(30_000);
+    })).toBe(120_000);
     expect(resolveChatPiEmptyAssistantStallTimeoutMs({
       AMBIENT_E2E: "1",
       AMBIENT_CHAT_PI_EMPTY_ASSISTANT_STALL_TIMEOUT_MS: "500",
@@ -61,6 +62,27 @@ describe("agentRuntimeTimeouts", () => {
   it("formats Pi stream timeout messages", () => {
     expect(piStreamStartTimeoutMessage(1500)).toBe("Ambient/Pi did not start streaming within 1500ms.");
     expect(piStreamStallTimeoutMessage(30000)).toBe("Ambient/Pi stream stalled after 30000ms without stream activity.");
+  });
+
+  it("adapts pre-stream timeouts to exact input size and reasoning level", () => {
+    expect(resolveAdaptivePiPreStreamTimeoutMs({
+      configuredTimeoutMs: 45_000,
+      inputTokens: 10_000,
+    })).toBe(45_000);
+    expect(resolveAdaptivePiPreStreamTimeoutMs({
+      configuredTimeoutMs: 45_000,
+      inputTokens: 69_377,
+    })).toBe(80_000);
+    expect(resolveAdaptivePiPreStreamTimeoutMs({
+      configuredTimeoutMs: 45_000,
+      inputTokens: 69_377,
+      thinkingLevel: "xhigh",
+    })).toBe(100_000);
+    expect(resolveAdaptivePiPreStreamTimeoutMs({
+      configuredTimeoutMs: 240_000,
+      inputTokens: 500_000,
+      thinkingLevel: "xhigh",
+    })).toBe(240_000);
   });
 
   it("resolves with undefined when a promise exceeds the timeout", async () => {

@@ -3,6 +3,9 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  AMBIENT_GLM_5_2_FP8_MODEL,
+} from "../../shared/ambientModels";
+import {
   applyLiveAmbientProviderApiKeyEnv,
   liveAmbientDirectHelperProfile,
   liveAmbientProviderBaseUrl,
@@ -11,6 +14,7 @@ import {
   liveAmbientProviderModel,
   readLiveAmbientProviderApiKey,
 } from "./liveAmbientProviderConfig";
+import { GMI_CLOUD_GLM_5_2_FP8_MODEL } from "./gmiCloudModelRouting";
 
 describe("liveAmbientProviderConfig", () => {
   let tempRoot = "";
@@ -35,7 +39,7 @@ describe("liveAmbientProviderConfig", () => {
 
   it("finds the user-suffixed Ambient key file before the legacy local key filename", () => {
     writeFileSync(join(tempRoot, "ambient_api_key_u.txt"), "ambient-user-key\n", { mode: 0o600 });
-    writeFileSync(join(tempRoot, "ignored provider key files"), "ambient-legacy-key\n", { mode: 0o600 });
+    writeFileSync(join(tempRoot, "ignored-provider-key-file.txt"), "ambient-legacy-key\n", { mode: 0o600 });
 
     expect(readLiveAmbientProviderApiKey({ env: {} as NodeJS.ProcessEnv, cwd: tempRoot })).toBe("ambient-user-key");
   });
@@ -72,9 +76,9 @@ describe("liveAmbientProviderConfig", () => {
     const profile = liveAmbientDirectHelperProfile(env);
 
     expect(profile).toMatchObject({
-      preStreamResponseTimeoutMs: 30_000,
-      streamIdleTimeoutMs: 30_000,
-      streamContentIdleTimeoutMs: 30_000,
+      preStreamResponseTimeoutMs: 60_000,
+      streamIdleTimeoutMs: 120_000,
+      streamContentIdleTimeoutMs: 120_000,
       testTimeoutMs: 180_000,
     });
     expect(profile.retryPolicy).toMatchObject({
@@ -83,6 +87,13 @@ describe("liveAmbientProviderConfig", () => {
       backoffMs: [1_000, 2_000, 3_000],
       providerMaxRetryDelayMs: 5_000,
     });
+  });
+
+  it("maps canonical Ambient model ids to GMI Cloud request ids", () => {
+    expect(liveAmbientProviderModel({
+      env: { AMBIENT_PROVIDER: "gmi-cloud" } as NodeJS.ProcessEnv,
+      fallbackModel: AMBIENT_GLM_5_2_FP8_MODEL,
+    })).toBe(GMI_CLOUD_GLM_5_2_FP8_MODEL);
   });
 
   it("allows direct-helper live timeout overrides", () => {

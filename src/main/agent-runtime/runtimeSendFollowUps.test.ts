@@ -75,7 +75,7 @@ describe("scheduleRuntimeSendFollowUps", () => {
       awaitedEmptyResponseRetry: false,
     });
     expect(schedulePlannerDurableRepairFollowUp).toHaveBeenCalledWith(plannerRepairFollowUp, "/tmp/workspace");
-    expect(timers.map((timer) => timer.delayMs)).toEqual([0, 0, 25]);
+    expect(timers.map((timer) => timer.delayMs)).toEqual([0, 1_000, 25]);
 
     timers.forEach((timer) => timer.callback());
     await new Promise((resolve) => setTimeout(resolve, 0));

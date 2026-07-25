@@ -8,6 +8,10 @@ import {
   type ProviderPayloadAccounting,
 } from "../../shared/contextAccounting";
 import {
+  AMBIENT_CONTEXT_SAFETY_MARGIN_TOKENS,
+  ambientProviderInputTokenBudget,
+} from "./agentRuntimeAmbientFacade";
+import {
   materializeTextOutput,
   materializedTextNotice,
   type MaterializedTextOutput,
@@ -24,6 +28,8 @@ export interface ProviderContextPreflightBudget {
   contextWindow: number;
   reserveTokens: number;
   hardPreflightPercent: number;
+  requestedOutputTokens?: number;
+  safetyMarginTokens?: number;
 }
 
 export interface ProviderContextPreflightOptions extends ProviderContextPreflightBudget {
@@ -130,7 +136,7 @@ export function createProviderCallContextPreflightExtension(options: ProviderCon
     (pi as any).on("before_provider_request", async (event: any) => {
       let requestOptions = options;
       try {
-        requestOptions = providerContextPreflightOptionsForRequest(options);
+        requestOptions = providerContextPreflightOptionsForRequest(options, event.payload);
         const result = await materializeProviderPayloadContext({
           payload: event.payload,
           options: requestOptions,
@@ -273,7 +279,14 @@ export function estimateProviderPayloadContextProtection(
 
 export function providerContextPreflightTokenBudget(input: ProviderContextPreflightBudget): number {
   const contextWindow = Math.max(1, Math.floor(input.contextWindow));
-  const reserveBudget = Math.max(1, contextWindow - Math.max(0, Math.floor(input.reserveTokens)));
+  const reserveBudget = input.requestedOutputTokens === undefined
+    ? Math.max(1, contextWindow - Math.max(0, Math.floor(input.reserveTokens)))
+    : ambientProviderInputTokenBudget({
+        contextWindowTokens: contextWindow,
+        requestedOutputTokens: input.requestedOutputTokens,
+        configuredReserveTokens: input.reserveTokens,
+        safetyMarginTokens: input.safetyMarginTokens ?? AMBIENT_CONTEXT_SAFETY_MARGIN_TOKENS,
+      });
   const hardPreflightPercent = input.hardPreflightPercent > 0 ? input.hardPreflightPercent : 100;
   const percentBudget = Math.max(1, Math.floor(contextWindow * (hardPreflightPercent / 100)));
   return Math.min(reserveBudget, percentBudget);
@@ -283,10 +296,16 @@ export function estimateUnboundedJsonByteLength(value: unknown): number {
   return estimateUnboundedJsonByteLengthInternal(value, new WeakSet<object>());
 }
 
-function providerContextPreflightOptionsForRequest(options: ProviderContextPreflightOptions): ProviderContextPreflightOptions {
+function providerContextPreflightOptionsForRequest(
+  options: ProviderContextPreflightOptions,
+  payload?: unknown,
+): ProviderContextPreflightOptions {
+  const payloadRecord = objectRecord(payload);
+  const requestedOutputTokens = numberField(payloadRecord?.max_completion_tokens) ?? numberField(payloadRecord?.max_tokens);
   return {
     ...options,
     contextWindow: numberField(options.getContextWindow?.()) ?? options.contextWindow,
+    ...(requestedOutputTokens ? { requestedOutputTokens } : {}),
   };
 }
 

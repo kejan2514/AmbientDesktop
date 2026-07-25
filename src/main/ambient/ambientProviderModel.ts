@@ -6,9 +6,16 @@ import {
   resolveAmbientModelRuntimeProfile,
   type AmbientModelRuntimeProfile,
 } from "../../shared/ambientModels";
+import { ambientRequestedOutputTokens } from "./ambientModelLimits";
 
-export function ambientModel(modelId: string, baseUrl: string, runtimeProfile?: AmbientModelRuntimeProfile): Model<"openai-completions"> {
+export function ambientModel(
+  modelId: string,
+  baseUrl: string,
+  runtimeProfile?: AmbientModelRuntimeProfile,
+  transport?: { requestModelId?: string },
+): Model<"openai-completions"> {
   const normalizedModelId = normalizeAmbientModelId(modelId);
+  const requestModelId = transport?.requestModelId?.trim() || normalizedModelId;
   const profile =
     runtimeProfile && normalizeAmbientModelId(runtimeProfile.modelId) === normalizedModelId
       ? runtimeProfile
@@ -25,7 +32,7 @@ export function ambientModel(modelId: string, baseUrl: string, runtimeProfile?: 
         ? { supportsReasoningEffort: false }
         : {};
   return {
-    id: normalizedModelId,
+    id: requestModelId,
     name: profile.label,
     api: "openai-completions",
     provider: "ambient",
@@ -45,7 +52,7 @@ export function ambientModel(modelId: string, baseUrl: string, runtimeProfile?: 
       cacheWrite: 0,
     },
     contextWindow: profile.contextWindowTokens ?? 200000,
-    maxTokens: profile.maxOutputTokens ?? 131072,
+    maxTokens: ambientRequestedOutputTokens(profile.maxOutputTokens),
   };
 }
 

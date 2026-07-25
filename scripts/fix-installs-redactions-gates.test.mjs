@@ -76,7 +76,7 @@ describe("fix-installs-redactions gates", () => {
     expect(prompt).toContain("/tmp/workspace/src/index.ts");
     expect(prompt).toContain("<sensitive-path-ref:v1:0123456789abcdef>");
     expect(prompt).toContain("not filesystem paths");
-    expect(prompt).not.toContain("ignored provider key files");
+    expect(prompt).not.toContain("ignored-provider-key-file.txt");
     expect(prompt).not.toContain("[REDACTED]");
     expect(() => fixInstallsRedactionsGatePrompt(gate)).toThrow(/context\.ordinaryPath/);
   });
