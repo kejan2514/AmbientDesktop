@@ -45,10 +45,13 @@ pnpm install
 pnpm run dev
 ```
 
+To run against a live Ambient provider during development, set the provider and model explicitly before starting the app:
 
 ```bash
 AMBIENT_PROVIDER=ambient AMBIENT_LIVE_MODEL=example/model-id pnpm run dev
 ```
+
+The live-provider command may require local credentials. Keep API keys and other secrets in your local credential/configuration flow; do not place them directly in shell history, commits, issues, logs, or artifacts.
 
 Build packaged artifacts on the target platform:
 
